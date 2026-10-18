@@ -26,7 +26,13 @@ jobs:
         run: |
           DATE="${{ github.event.inputs.date }}"
           if [ -z "$DATE" ] && [ -f print/request.txt ]; then DATE=$(head -1 print/request.txt | tr -d '[:space:]'); fi
-          node scripts/render-print.mjs "$DATE" "print/dalton-daily-${DATE:-latest}.pdf"
+          node scripts/render-print.mjs "$DATE" "raw.pdf"
+          sudo apt-get install -y -qq ghostscript >/dev/null
+          # Print-shop-friendly file: photos downsampled to 225 dpi, text and vectors untouched.
+          gs -q -dNOPAUSE -dBATCH -sDEVICE=pdfwrite -dCompatibilityLevel=1.6 -dPDFSETTINGS=/printer \
+             -dDownsampleColorImages=true -dColorImageResolution=225 -dDownsampleGrayImages=true -dGrayImageResolution=225 \
+             -sOutputFile="print/dalton-daily-${DATE:-latest}.pdf" raw.pdf
+          echo "::notice title=size::$(du -h print/dalton-daily-${DATE:-latest}.pdf | cut -f1)"
       - name: Commit PDF
         run: |
           git config user.name "dalton-daily-bot"
