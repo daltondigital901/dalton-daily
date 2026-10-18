@@ -76,7 +76,7 @@ export class EditionWorkflow extends WorkflowEntrypoint {
       try {
         const sub = await step.do("batch submit", { retries: { limit: 2, delay: "30 seconds" } }, async () => {
           const items = [
-            ...SECTIONS.map((sec) => ({ id: `section:${sec.key}`, req: sectionRequest(env, sec, ctx) })),
+            ...SECTIONS.map((sec) => ({ id: `section-${sec.key}`, req: sectionRequest(env, sec, ctx) })),
             { id: "stoic", req: stoicRequest(env, ctx, date) },
             { id: "commonplace", req: commonplaceRequest(env, ctx, date) },
           ];
@@ -107,7 +107,7 @@ export class EditionWorkflow extends WorkflowEntrypoint {
       }
     }
     for (const sec of SECTIONS) {
-      const o = batched[`section:${sec.key}`];
+      const o = batched[`section-${sec.key}`];
       if (!o) continue;
       try {
         const r = finishSection(sec, fromBatch(o));
@@ -164,7 +164,7 @@ export class EditionWorkflow extends WorkflowEntrypoint {
     // Batch API halves token prices; web search $10 per 1,000 either way.
     const tokCost = (t) => t.input * 2e-6 + t.output * 1e-5 + t.cacheRead * 1e-7 + t.cacheWrite * 2.5e-6;
     const cost = +(searches * 0.01 + tokCost(tokens) + tokCost(batchTokens) / 2).toFixed(2);
-    const batchedCount = SECTIONS.filter((sec) => batched[`section:${sec.key}`]).length;
+    const batchedCount = SECTIONS.filter((sec) => batched[`section-${sec.key}`]).length;
 
     const extras = await step.do("comics and weather", async () => ({
       comics: await fetchComics(),
