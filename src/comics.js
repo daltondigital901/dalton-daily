@@ -71,12 +71,23 @@ export async function fetchComics() {
 }
 
 export async function fetchWeather() {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const w = await fetchWeatherOnce();
+    if (w) return w;
+    await new Promise((r) => setTimeout(r, 3000));
+  }
+  return null;
+}
+
+async function fetchWeatherOnce() {
   try {
     const url =
       "https://api.open-meteo.com/v1/forecast?latitude=35.1495&longitude=-90.0490" +
       "&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code" +
       "&temperature_unit=fahrenheit&timezone=America%2FChicago&forecast_days=1";
-    const j = await (await fetch(url)).json();
+    const res = await fetch(url, { headers: UA });
+    if (!res.ok) return null;
+    const j = await res.json();
     const code = j.daily.weather_code[0];
     return {
       high: Math.round(j.daily.temperature_2m_max[0]),

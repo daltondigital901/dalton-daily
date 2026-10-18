@@ -103,6 +103,8 @@ figure.ph figcaption{font-family:"Libre Franklin",Arial,sans-serif;font-size:10.
 .feat.c6 .body{column-count:3}
 .feat.c6.split{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:0 30px;align-items:start}
 .feat.c6.split .body{column-count:1}
+.feat.c6.split:not(:has(figure.ph)){display:block}
+.feat.c6.split:not(:has(figure.ph)) .body{column-count:3}
 .story h4{font-size:21px;line-height:1.17}
 .cell{border-top:1px solid var(--hair);padding-top:16px;margin-top:22px}
 .cell h4{font-size:22px}
@@ -129,7 +131,7 @@ footer{margin-top:48px;border-top:4px double var(--rule);padding-top:10px;font-f
 
 @media (max-width:1000px){
  .pics .row{grid-template-columns:repeat(2,minmax(0,1fr))}
- .lead .body,.feat .body,.feat.c6 .body{column-count:1}
+ .lead .body,.feat .body,.feat.c6 .body,.feat.c6.split:not(:has(figure.ph)) .body{column-count:1}
  .c2{grid-column:span 3}
  .feat.c6.split{grid-template-columns:1fr}
 }
