@@ -49,6 +49,32 @@ async function smbc() {
   };
 }
 
+// Poorly Drawn Lines (Reza Farazmand): light, dry and smart. WordPress feed; the strip is the first
+// large image in the post. Falls back to the post page's share image.
+async function pdl() {
+  const r = await fetch("https://poorlydrawnlines.com/feed/", { headers: UA });
+  const xml = await r.text();
+  const m = xml.match(/<item>([\s\S]*?)<\/item>/);
+  if (!m) return null;
+  const item = m[1];
+  const tag = (t) => {
+    const x = item.match(new RegExp(`<${t}>([\\s\\S]*?)</${t}>`));
+    return x ? decode(x[1]) : "";
+  };
+  const title = tag("title");
+  const link = tag("link");
+  const html = tag("content:encoded") + tag("description");
+  const imgs = [...html.matchAll(/<img[^>]+src="([^"]+)"/g)].map((x) => x[1]).filter((u) => !/emoji|gravatar|feeds\.|pixel|1x1/i.test(u));
+  let img = imgs.find((u) => /uploads/i.test(u)) || imgs[0];
+  if (!img && link) {
+    const page = await (await fetch(link, { headers: UA })).text();
+    const og = page.match(/<meta[^>]+property=["']og:image["'][^>]*content=["']([^"']+)["']/i);
+    img = og ? decode(og[1]) : null;
+  }
+  if (!img) return null;
+  return { key: "pdl", strip: "Poorly Drawn Lines", author: "Reza Farazmand", title, images: [img], caption: "", link, date: tag("pubDate") };
+}
+
 async function existential() {
   const r = await fetch("https://existentialcomics.com/rss.xml", { headers: UA });
   const it = firstItem(await r.text());
@@ -62,7 +88,7 @@ async function existential() {
 }
 
 export async function fetchComics() {
-  const jobs = [xkcd(), smbc(), existential()];
+  const jobs = [xkcd(), pdl(), smbc(), existential()];
   const out = [];
   for (const r of await Promise.allSettled(jobs)) {
     if (r.status === "fulfilled" && r.value) out.push(r.value);

@@ -1,5 +1,20 @@
 import { renderEdition, renderArchive, renderMessage, PAGES } from "./render.js";
 import { SECTIONS } from "./sections.js";
+import { ICONS } from "./icons.js";
+
+function b64(b) {
+  const bin = atob(b);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+const ICON_ROUTES = {
+  "/favicon.ico": ["ico", "image/x-icon"],
+  "/apple-touch-icon.png": ["p180", "image/png"],
+  "/apple-touch-icon-precomposed.png": ["p180", "image/png"],
+  "/icon-192.png": ["p192", "image/png"],
+  "/icon-512.png": ["p512", "image/png"],
+};
 
 export { EditionWorkflow } from "./workflow.js";
 
@@ -37,6 +52,17 @@ export default {
     const { date: today } = localParts(env.TIMEZONE || "America/Chicago");
 
     if (url.pathname === "/robots.txt") return new Response("User-agent: *\nDisallow: /\n");
+    if (ICON_ROUTES[url.pathname]) {
+      const [key, type] = ICON_ROUTES[url.pathname];
+      return new Response(b64(ICONS[key]), { headers: { "content-type": type, "cache-control": "public, max-age=604800" } });
+    }
+    if (url.pathname === "/manifest.webmanifest") {
+      return Response.json({
+        name: "Dalton Daily", short_name: "Dalton Daily", start_url: "/", display: "standalone",
+        background_color: "#f6f2e8", theme_color: "#17140f",
+        icons: [{ src: "/icon-192.png", sizes: "192x192", type: "image/png" }, { src: "/icon-512.png", sizes: "512x512", type: "image/png" }],
+      }, { headers: { "content-type": "application/manifest+json" } });
+    }
 
     if (url.pathname === "/api/vote" && req.method === "POST") {
       const body = await req.json().catch(() => null);

@@ -8,7 +8,7 @@ A private, one-reader morning newspaper. Standalone project: its own Worker, D1 
 - Reporters are told to source beyond U.S. legacy media: primary documents, foreign press, investigative outlets and independent newsletters. Each source is tagged by kind.
 - The Workflow reports 17 sections (6 at a time). Each section is one Claude API call with the web search tool, returning JSON stories. Each section is its own durable step with retries, so one failure never blocks the paper.
 - The 5 most important stories (one per section max) make the front page.
-- Comics: xkcd (JSON API), Existential Comics and SMBC (publishers' RSS).
+- Comics: xkcd (JSON API), Poorly Drawn Lines, Existential Comics and SMBC (publishers' feeds).
 - Story photos: each story's lead image is the og:image its publisher sets for sharing, taken from the first source that has one; site-wide default images are dropped.
 - Morning Reflections: a daily Stoic reading (alternating major Stoics with lesser-known figures and fragments, quoted from public-domain translations or translated fresh), a daily scripture (passage chosen by Claude, verse text from bible-api.com, World English Bible) and a daily SLAA reading written in Claude's own words from SLAA documents on slaafws.org, linked to the source. About 7 days in 10 focus on limerence and recovery.
 - Memphis weather from Open-Meteo.

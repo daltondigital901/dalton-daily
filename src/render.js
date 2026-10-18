@@ -116,7 +116,8 @@ figure.ph figcaption{font-family:"Libre Franklin",Arial,sans-serif;font-size:10.
 .missing{font-style:italic;color:var(--muted)}
 
 /* Comics */
-.comics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;margin-top:18px;align-items:start}
+.comics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-areas:"xkcd smbc" "pdl smbc" "existential existential";gap:24px 30px;margin-top:18px;align-items:start}
+.strip.k-xkcd{grid-area:xkcd}.strip.k-smbc{grid-area:smbc}.strip.k-pdl{grid-area:pdl}.strip.k-existential{grid-area:existential}
 .strip{border-top:2px solid var(--rule);padding-top:10px}
 .strip.wide{grid-column:1/-1}
 .strip .name{font-family:"Playfair Display",Georgia,serif;font-weight:900;font-size:22px;margin:0}
@@ -236,7 +237,7 @@ footer{margin-top:48px;border-top:4px double var(--rule);padding-top:10px;font-f
  .front{grid-template-columns:1fr}.lead{padding-right:0;border-right:0;border-bottom:1px solid var(--hair);padding-bottom:16px}.side{padding-left:0;padding-top:16px}
  .c3{grid-column:span 6}.feat.c6.split{display:block}
  .reflect{grid-template-columns:1fr}.reflect>div+div{border-left:0;border-top:1px solid var(--hair)}
- .comics{grid-template-columns:1fr}.archive{column-count:1}
+ .comics{grid-template-columns:1fr;grid-template-areas:"xkcd" "pdl" "smbc" "existential"}.archive{column-count:1}
  .dateline{justify-content:center}.feat h4{font-size:27px}
 }
 `;
@@ -274,7 +275,7 @@ const SCRIPT = `
 
 function shell(title, inner) {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(title)}</title><meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#f6f2e8" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#181714" media="(prefers-color-scheme: dark)"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Dalton Daily"><meta name="format-detection" content="telephone=no">${FONTS}<style>${CSS}</style></head>
+<title>${esc(title)}</title><meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#f6f2e8" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#181714" media="(prefers-color-scheme: dark)"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Dalton Daily"><meta name="format-detection" content="telephone=no"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/manifest.webmanifest">${FONTS}<style>${CSS}</style></head>
 <body><div class="page">${inner}</div>${SCRIPT}</body></html>`;
 }
 
@@ -511,8 +512,7 @@ function comicsPage(ed) {
     .filter((c) => !c.linkOnly && c.images?.length)
     .map((c) => {
       const imgs = c.images.map((src) => `<img src="${esc(src)}" alt="${esc(c.title)}" loading="lazy" referrerpolicy="no-referrer">`).join("");
-      const wide = c.key === "existential";
-      return `<div class="strip${wide ? " wide" : ""}"><p class="name">${esc(c.strip)}</p><div class="by">${esc(c.author)}${c.license ? ` &middot; ${esc(c.license)}` : ""}</div>
+      return `<div class="strip k-${esc(c.key)}"><p class="name">${esc(c.strip)}</p><div class="by">${esc(c.author)}${c.license ? ` &middot; ${esc(c.license)}` : ""}</div>
       <p class="ttl">${esc(c.title)}</p>${imgs}${c.caption ? `<p class="cap">${esc(c.caption)}</p>` : ""}
       <a class="go" href="${esc(c.link)}" target="_blank" rel="noopener">View at source &rarr;</a></div>`;
     })
