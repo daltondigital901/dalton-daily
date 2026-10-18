@@ -181,6 +181,7 @@ blockquote.stoic p{margin:0 0 8px;text-align:left}
  nav.index{position:sticky;top:0;z-index:20;background:var(--paper);flex-wrap:nowrap;justify-content:flex-start;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;gap:0;margin:0 -14px;padding:0 6px;border-bottom:1px solid var(--rule);box-shadow:0 6px 10px -10px rgba(0,0,0,.35)}
  nav.index::-webkit-scrollbar{display:none}
  nav.index a{flex:0 0 auto;padding:12px 10px;font-size:11.5px;white-space:nowrap}
+ nav.index a[data-r]{color:var(--accent);font-weight:700}
  nav.index a.on{border-bottom:0;box-shadow:inset 0 -3px 0 var(--accent);padding-bottom:12px}
  /* Readable text: no justified rivers on a narrow column */
  .body p,.lead .body p{text-align:left;hyphens:manual}
@@ -274,7 +275,7 @@ function shell(title, inner) {
 
 // Page links: base is "" for today's paper or "/YYYY-MM-DD" for an archived edition.
 const DESK_BY_KEY = Object.fromEntries(DESKS.map((d) => [d.key, d]));
-export const PAGES = [...DESKS.map((d) => d.slug), "reflections", "comics"];
+export const PAGES = ["reflections", ...DESKS.map((d) => d.slug), "comics"];
 const deskOf = (s) => DESK_BY_KEY[SECTION_BY_KEY[s.section]?.desk];
 const storyHref = (s, base) => `${base}/${deskOf(s)?.slug || ""}#s-${s.id}`;
 
@@ -295,8 +296,8 @@ function masthead(ed, base = "", active = "") {
 </header>
   <nav class="index">
     ${link(base || "/", "Front Page", "home")}
+    ${link(`${base}/reflections`, "Reflections", "reflections").replace("<a ", '<a data-r="1" ')}
     ${DESKS.map((d) => link(`${base}/${d.slug}`, d.name, d.slug)).join("")}
-    ${link(`${base}/reflections`, "Reflections", "reflections")}
     ${link(`${base}/comics`, "Comics", "comics")}
   </nav>`;
 }
