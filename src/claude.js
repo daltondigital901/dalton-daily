@@ -37,7 +37,9 @@ export async function callClaude(env, { system, prompt, tools = [], maxTokens = 
       body: JSON.stringify({
         model: env.MODEL || "claude-sonnet-5-5",
         max_tokens: maxTokens,
-        system,
+        // An explicit cache marker turns on prompt caching, which also caches each web search result
+        // as the server-side search loop goes, so later search turns re-read them at 5% of input price.
+        system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
         messages,
         ...(tools.length ? { tools } : {}),
       }),

@@ -101,8 +101,8 @@ export class EditionWorkflow extends WorkflowEntrypoint {
     for (const d of [scripture, commonplace, stoic]) {
       if (d?._usage) { addUsage(d._usage); searches += d._usage.searches || 0; delete d._usage; }
     }
-    // Claude Sonnet 5.5: $2/M input, $10/M output; cache reads 10% of input; web search $10 per 1,000.
-    const cost = +(searches * 0.01 + tokens.input * 2e-6 + tokens.output * 1e-5 + tokens.cacheRead * 2e-7 + tokens.cacheWrite * 2.5e-6).toFixed(2);
+    // Claude Sonnet 5.5: $2/M input, $10/M output; cache writes 1.25x and reads 0.05x of input; web search $10 per 1,000.
+    const cost = +(searches * 0.01 + tokens.input * 2e-6 + tokens.output * 1e-5 + tokens.cacheRead * 1e-7 + tokens.cacheWrite * 2.5e-6).toFixed(2);
 
     const extras = await step.do("comics and weather", async () => ({
       comics: await fetchComics(),
