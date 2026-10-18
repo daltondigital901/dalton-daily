@@ -5,7 +5,7 @@
 //
 // Commonplace Book: a short, checked essay on one idea, event or figure, rotating through philosophy,
 // theology, metaphysics, history, science, literature and entrepreneurship.
-import { callClaude, extractJson, scrub } from "./claude.js";
+import { callClaude, extractJson, scrub, searchTool } from "./claude.js";
 
 const TRANSLATION = "web";
 
@@ -23,7 +23,7 @@ export async function writeScripture(env, ctx) {
     '"query" must be the reference in a form bible-api.com accepts: lowercase book name, chapter:verse-verse.',
   ].filter(Boolean).join("\n\n");
 
-  const { text } = await callClaude(env, { system, prompt, maxTokens: 1200 });
+  const { text, usage, searches } = await callClaude(env, { system, prompt, maxTokens: 1200 });
   const pick = extractJson(text);
   let verses = [];
   let reference = pick.reference;
@@ -42,6 +42,7 @@ export async function writeScripture(env, ctx) {
     verses,
     translation: "World English Bible",
     link: `https://www.biblegateway.com/passage/?search=${encodeURIComponent(reference)}&version=WEB`,
+    _usage: { ...usage, searches },
   };
 }
 
@@ -100,14 +101,14 @@ export async function writeStoic(env, ctx, dateIso) {
     'JSON shape: <json>{"author":"Name","work":"Work title","citation":"Book 2, section 4","translator":"Translator, year | Translated for Dalton Daily","url":"https://link to the text (Perseus, Wikisource, LacusCurtius, Project Gutenberg) or blank","passage":"The passage","context":"One or two sentences: who this was and how the text survived","reflection":"Three or four sentences of plain reflection in your own words, connected to ordinary life","practice":"One concrete exercise for today"}</json>',
   ].filter(Boolean).join("\n\n");
 
-  const { text } = await callClaude(env, {
+  const { text, usage, searches } = await callClaude(env, {
     system,
     prompt,
     maxTokens: 3000,
-    tools: [{
-      type: "web_search_20250305", name: "web_search", max_uses: 4,
+    tools: [searchTool(env, {
+      max_uses: 4,
       allowed_domains: ["perseus.tufts.edu", "wikisource.org", "en.wikisource.org", "penelope.uchicago.edu", "gutenberg.org", "thelatinlibrary.com", "sacred-texts.com", "attalus.org", "archive.org", "stoicsource.com", "plato.stanford.edu", "iep.utm.edu"],
-    }],
+    })],
   });
   const r = extractJson(text);
   return {
@@ -121,6 +122,7 @@ export async function writeStoic(env, ctx, dateIso) {
     reflection: scrub(r.reflection || ""),
     practice: scrub(r.practice || ""),
     obscure: focus.obscure,
+    _usage: { ...usage, searches },
   };
 }
 
@@ -160,14 +162,14 @@ export async function writeCommonplace(env, ctx, dateIso) {
     recent.length ? `Do NOT repeat any of these recent subjects:\n- ${recent.join("\n- ")}` : "",
     'JSON shape: <json>{"field":"' + focus.field + '","title":"A short, specific title","dek":"One line on why it is worth knowing","essay":"220-320 words in three or four short paragraphs separated by a blank line","takeaway":"One sentence to remember","further":"A good next read: author and title","source":"Name of the main source","url":"https://..."}</json>',
   ].filter(Boolean).join("\n\n");
-  const { text, citedUrls } = await callClaude(env, {
+  const { text, citedUrls, usage, searches } = await callClaude(env, {
     system,
     prompt,
     maxTokens: 3000,
-    tools: [{
-      type: "web_search_20250305", name: "web_search", max_uses: 4,
+    tools: [searchTool(env, {
+      max_uses: 4,
       allowed_domains: ["plato.stanford.edu", "iep.utm.edu", "britannica.com", "en.wikipedia.org", "newadvent.org", "ccel.org", "perseus.tufts.edu", "gutenberg.org", "nature.com", "science.org", "nasa.gov", "si.edu", "loc.gov", "archives.gov", "history.state.gov", "hbs.edu", "hbr.org", "nobelprize.org", "royalsociety.org", "bl.uk", "metmuseum.org", "poetryfoundation.org", "jstor.org"],
-    }],
+    })],
   });
   const r = extractJson(text);
   let url = /^https:\/\//.test(r.url || "") ? r.url : [...citedUrls.keys()][0] || "";
@@ -180,5 +182,6 @@ export async function writeCommonplace(env, ctx, dateIso) {
     further: scrub(r.further || ""),
     source: scrub(r.source || ""),
     url,
+    _usage: { ...usage, searches },
   };
 }

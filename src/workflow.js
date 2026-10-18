@@ -63,6 +63,8 @@ export class EditionWorkflow extends WorkflowEntrypoint {
     const sections = {};
     const errors = {};
     let searches = 0;
+    const tokens = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
+    const addUsage = (u) => { if (!u) return; for (const k of Object.keys(tokens)) tokens[k] += u[k] || 0; };
     for (let i = 0; i < SECTIONS.length; i += BATCH) {
       const batch = SECTIONS.slice(i, i + BATCH);
       const results = await Promise.all(
@@ -80,7 +82,7 @@ export class EditionWorkflow extends WorkflowEntrypoint {
         })
       );
       for (const [key, r, err] of results) {
-        if (r) { sections[key] = r.stories; searches += r.searches; }
+        if (r) { sections[key] = r.stories; searches += r.searches; addUsage(r.usage); }
         else errors[key] = err;
       }
     }
@@ -95,6 +97,12 @@ export class EditionWorkflow extends WorkflowEntrypoint {
       step.do("commonplace", retry, () => writeCommonplace(env, ctx, date)).catch((e) => { errors.commonplace = String(e?.message || e).slice(0, 400); return null; }),
       step.do("stoic reading", retry, () => writeStoic(env, ctx, date)).catch((e) => { errors.stoic = String(e?.message || e).slice(0, 400); return null; }),
     ]);
+
+    for (const d of [scripture, commonplace, stoic]) {
+      if (d?._usage) { addUsage(d._usage); searches += d._usage.searches || 0; delete d._usage; }
+    }
+    // Claude Sonnet 5.5: $2/M input, $10/M output; cache reads 10% of input; web search $10 per 1,000.
+    const cost = +(searches * 0.01 + tokens.input * 2e-6 + tokens.output * 1e-5 + tokens.cacheRead * 2e-7 + tokens.cacheWrite * 2.5e-6).toFixed(2);
 
     const extras = await step.do("comics and weather", async () => ({
       comics: await fetchComics(),
@@ -158,7 +166,7 @@ export class EditionWorkflow extends WorkflowEntrypoint {
           "UPDATE runs SET finished_at = datetime('now'), status = ?, detail = ? WHERE id = (SELECT MAX(id) FROM runs WHERE date = ?)"
         ).bind(
           Object.keys(errors).length ? "partial" : "ok",
-          JSON.stringify({ stories: ids.length, images: ids.filter((s) => s.image).length, searches, errors }),
+          JSON.stringify({ stories: ids.length, images: ids.filter((s) => s.image).length, searches, tokens, cost, errors }),
           date
         ),
       ];

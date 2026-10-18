@@ -10,11 +10,21 @@ const BLOCKED = [
   "ts2.tech", "opentools.ai", "theoutpost.ai", "devdiscourse.com", "newsnow.co.uk",
 ];
 
+// Web search with dynamic filtering: Claude filters results in code before they enter its context,
+// so the same searches cost far fewer input tokens. Set SEARCH_TOOL=web_search_20250305 to go back.
+export function searchTool(env, extra = {}) {
+  const type = env.SEARCH_TOOL || "web_search_20260318";
+  const tool = { type, name: "web_search", ...extra };
+  if (type === "web_search_20260318") tool.response_inclusion = "excluded";
+  return tool;
+}
+
 export async function callClaude(env, { system, prompt, tools = [], maxTokens = 8000 }) {
   const messages = [{ role: "user", content: prompt }];
   const texts = [];
   const citedUrls = new Map();
   let searches = 0;
+  const usage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
 
   for (let turn = 0; turn < 6; turn++) {
     const res = await fetch(API, {
@@ -38,6 +48,10 @@ export async function callClaude(env, { system, prompt, tools = [], maxTokens = 
     }
     const data = await res.json();
     searches += data.usage?.server_tool_use?.web_search_requests || 0;
+    usage.input += data.usage?.input_tokens || 0;
+    usage.output += data.usage?.output_tokens || 0;
+    usage.cacheRead += data.usage?.cache_read_input_tokens || 0;
+    usage.cacheWrite += data.usage?.cache_creation_input_tokens || 0;
 
     for (const block of data.content || []) {
       if (block.type === "text") {
@@ -52,7 +66,7 @@ export async function callClaude(env, { system, prompt, tools = [], maxTokens = 
       messages.push({ role: "assistant", content: data.content });
       continue;
     }
-    return { text: texts.join(""), citedUrls, searches };
+    return { text: texts.join(""), citedUrls, searches, usage };
   }
   throw new Error("Claude API: too many paused turns");
 }
@@ -166,19 +180,14 @@ export async function reportSection(env, section, ctx) {
     .filter(Boolean)
     .join("\n\n");
 
-  const searchTool = {
-    type: "web_search_20250305",
-    name: "web_search",
-    max_uses: Number(env.SEARCHES_PER_SECTION || 5),
-    blocked_domains: BLOCKED,
-  };
+  const tool = searchTool(env, { max_uses: Number(env.SEARCHES_PER_SECTION || 5), blocked_domains: BLOCKED });
   if (section.local) {
-    searchTool.user_location = {
+    tool.user_location = {
       type: "approximate", city: "Memphis", region: "Tennessee", country: "US", timezone: "America/Chicago",
     };
   }
 
-  const { text, citedUrls, searches } = await callClaude(env, { system, prompt, tools: [searchTool] });
+  const { text, citedUrls, searches, usage } = await callClaude(env, { system, prompt, tools: [tool] });
   let parsed;
   try {
     parsed = extractJson(text);
@@ -189,5 +198,5 @@ export async function reportSection(env, section, ctx) {
   // Backfill sources from citations if the model left a story without any.
   const fallback = [...citedUrls.entries()].slice(0, 2).map(([url, title]) => ({ name: title, url }));
   for (const s of stories) if (!s.sources.length) s.sources = fallback;
-  return { stories: stories.slice(0, section.count), searches };
+  return { stories: stories.slice(0, section.count), searches, usage };
 }

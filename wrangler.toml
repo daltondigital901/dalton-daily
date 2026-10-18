@@ -22,6 +22,7 @@ MODEL = "claude-sonnet-5-5"
 TIMEZONE = "America/Chicago"
 EDITION_HOUR = "2"
 SEARCHES_PER_SECTION = "7"
+SEARCH_TOOL = "web_search_20250305"
 
 [[d1_databases]]
 binding = "DB"
