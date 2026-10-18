@@ -72,6 +72,16 @@ export function scrub(t) {
     .trim();
 }
 
+// Drop any sentence where the reporter talks about its own searching ("the pages I found...").
+const SELF = /\b(I|we)\b[^.!?]{0,40}\b(found|find|located|retrieved|searched|checked|could not|couldn't|did not|didn't|was unable)\b|\bpages (I|we)\b|\bpages retrieved\b|\bmy (search|searches)\b|\bin (the|my) search results\b/i;
+export function noSelf(t) {
+  return String(t || "")
+    .split(/(?<=[.!?])\s+/)
+    .filter((sentence) => !SELF.test(sentence))
+    .join(" ")
+    .trim();
+}
+
 function cleanStory(s) {
   const sources = Array.isArray(s.sources)
     ? s.sources
@@ -86,7 +96,7 @@ function cleanStory(s) {
   return {
     headline: scrub(s.headline),
     dek: scrub(s.dek),
-    body: scrub(s.body),
+    body: noSelf(scrub(s.body)),
     why: scrub(s.why),
     dateline: scrub(s.dateline),
     importance: Math.max(1, Math.min(10, Number(s.importance) || 5)),
