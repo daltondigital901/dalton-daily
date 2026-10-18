@@ -97,6 +97,10 @@ export const SECTIONS = [
     brief: "Brazilian jiu-jitsu, submission grappling and judo: IBJJF, ADCC, WNO, CJI, UFC Fight Pass Invitational and other major events — results, upsets, upcoming cards and rule changes; the IJF World Tour, Grand Slams and Olympic judo; notable athletes, academies and controversies; Memphis-area events when there are any. Use FloGrappling, Jits Magazine, BJJ Heroes, BJJEE, the IJF site and JudoInside alongside mainstream coverage.",
   },
   {
+    key: "mma", desk: "sports", name: "MMA", photo: "Mixed martial arts octagon", count: 3, lookback: 5,
+    brief: "Mixed martial arts: UFC, PFL, ONE Championship, Bellator and other major promotions — results and finishes from the latest cards, title pictures and rankings, upcoming fights worth watching, injuries and withdrawals, judging and commission controversies, and the grappling side of the sport. Use official promotion sites and results pages (primary), Sherdog, Tapology, MMA Fighting, MMA Junkie, Bloody Elbow and ESPN MMA.",
+  },
+  {
     key: "travel", desk: "travel", name: "Travel News", photo: "Airport terminal", count: 2,
     brief: "Travel news: airline and airport changes (especially anything affecting Memphis International), State Department travel advisories, and notable deals or disruptions.",
   },

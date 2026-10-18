@@ -648,7 +648,7 @@ export function renderEdition(ed, { notice, page = "home", base = "" } = {}) {
     memphis: "Memphis and Shelby County politics, and what's on this week.",
     ideas: "Religion and philosophy.",
     culture: "Arts, books, film, and music with a focus on piano and classical.",
-    sports: "Jiu-jitsu and judo.",
+    sports: "MMA, jiu-jitsu and judo.",
     travel: "Travel news, dive destinations and places off the beaten path.",
   };
   let description;
