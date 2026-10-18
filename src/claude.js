@@ -2,7 +2,13 @@
 import { READER_PROFILE } from "./sections.js";
 
 const API = "https://api.anthropic.com/v1/messages";
-const KINDS = ["primary", "wire", "legacy", "foreign", "investigative", "independent"];
+const KINDS = ["primary", "wire", "legacy", "foreign", "investigative", "independent", "trade", "research"];
+// Aggregators, syndication mirrors and SEO content farms: search around them so the original gets linked.
+const BLOCKED = [
+  "yahoo.com", "msn.com", "newsbreak.com", "ground.news", "investing.com", "trefis.com", "marketchameleon.com",
+  "tradingkey.com", "discoveryalert.com", "biggo.com", "benzinga.com", "marketbeat.com", "fool.com",
+  "ts2.tech", "opentools.ai", "theoutpost.ai", "devdiscourse.com", "newsnow.co.uk",
+];
 
 export async function callClaude(env, { system, prompt, tools = [], maxTokens = 8000 }) {
   const messages = [{ role: "user", content: prompt }];
@@ -103,7 +109,13 @@ export async function reportSection(env, section, ctx) {
     "- Aim for a mix: across a section's stories, include at least one primary source and at least one non-U.S. or independent/investigative source when they exist.",
     "- Prefer the original over a rewrite: link the court filing, the study, the foreign outlet that broke it, not the aggregator.",
     "- Treat newsletters and partisan outlets as claims, not facts: say who is claiming what, and note when something is not independently confirmed.",
-    "- For each source, give its kind: primary, wire, legacy, foreign, investigative, independent.",
+    "- Never cite aggregators, syndication copies, stock-promo or SEO content-farm sites. If a story appears there, find and link the original.",
+    "- For each source, give its kind, precisely:",
+    "    primary = the document itself (filing, opinion, statute, release, dataset, paper, official statement)",
+    "    wire = Reuters, AP, AFP, Bloomberg wire;  legacy = major U.S. national or local newspapers and networks",
+    "    foreign = a news outlet based outside the U.S.;  investigative = outlets whose core work is investigations (ProPublica, Bellingcat, ICIJ, OCCRP...)",
+    "    independent = a named writer's own newsletter or site (Substack, Ghost, personal blog) with real expertise",
+    "    trade = specialist industry press (Utility Dive, BleepingComputer, Law360, Variety...);  research = think tanks, NGOs, data/monitoring groups, law-firm client alerts",
     "- Return ONLY a JSON object wrapped in <json></json> tags. No other prose.",
   ].join("\n");
 
@@ -122,7 +134,7 @@ export async function reportSection(env, section, ctx) {
     disliked.length ? `The reader disliked these past stories (less like this):\n- ${disliked.join("\n- ")}` : "",
     "",
     "JSON shape:",
-    `<json>{"stories":[{"headline":"Short newspaper headline, under 14 words","dek":"One-line subheadline","dateline":"CITY or blank","body":"Summary of 90-150 words in your own words: what happened, key numbers, who, and what comes next","why":"One sentence on why it matters","importance":1-10 (10 = front-page news anywhere),"update":false,"sources":[{"name":"Outlet or document name","url":"https://...","kind":"primary|wire|legacy|foreign|investigative|independent"}]}]}</json>`,
+    `<json>{"stories":[{"headline":"Short newspaper headline, under 14 words","dek":"One-line subheadline","dateline":"CITY or blank","body":"Summary of 90-150 words in your own words: what happened, key numbers, who, and what comes next","why":"One sentence on why it matters","importance":1-10 (10 = front-page news anywhere),"update":false,"sources":[{"name":"Outlet or document name","url":"https://...","kind":"primary|wire|legacy|foreign|investigative|independent|trade|research"}]}]}</json>`,
   ]
     .filter(Boolean)
     .join("\n\n");
@@ -131,6 +143,7 @@ export async function reportSection(env, section, ctx) {
     type: "web_search_20250305",
     name: "web_search",
     max_uses: Number(env.SEARCHES_PER_SECTION || 5),
+    blocked_domains: BLOCKED,
   };
   if (section.local) {
     searchTool.user_location = {

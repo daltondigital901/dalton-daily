@@ -244,7 +244,7 @@ function comicsPage(ed) {
         return `<div class="strip"><p class="name">${esc(c.strip)}</p><div class="by">${esc(c.author)}</div>
         <p class="cap">${esc(c.caption)}</p><a class="go" href="${esc(c.link)}" target="_blank" rel="noopener">Read today's strip &rarr;</a></div>`;
       }
-      const imgs = c.images.map((src) => `<img src="${esc(src)}" alt="${esc(c.title)}" loading="lazy" referrerpolicy="no-referrer">`).join("");
+      const imgs = c.images.map((src) => `<img src="${esc(src)}" alt="${esc(c.title)}" loading="eager" referrerpolicy="no-referrer">`).join("");
       const wide = c.key === "existential" || c.key === "smbc";
       return `<div class="strip${wide ? " wide" : ""}"><p class="name">${esc(c.strip)}</p><div class="by">${esc(c.author)}${c.license ? ` &middot; ${esc(c.license)}` : ""}</div>
       <p class="ttl">${esc(c.title)}</p>${imgs}${c.caption ? `<p class="cap">${esc(c.caption)}</p>` : ""}
