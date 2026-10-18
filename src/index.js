@@ -96,9 +96,14 @@ export default {
 
   async scheduled(event, env, ctx) {
     const { date, hour } = localParts(env.TIMEZONE || "America/Chicago");
-    if (hour !== Number(env.EDITION_HOUR || 3)) return; // the other UTC slot (DST) does nothing
+    if (hour !== Number(env.EDITION_HOUR || 2)) return; // the other UTC slots (DST) do nothing
     const exists = await env.DB.prepare("SELECT 1 FROM editions WHERE date = ? AND status = 'complete'").bind(date).first();
     if (exists) return;
+    // Backup slot: skip if an attempt is still running from the last 25 minutes.
+    const running = await env.DB.prepare(
+      "SELECT 1 FROM runs WHERE date = ? AND status = 'running' AND started_at >= datetime('now', '-25 minutes')"
+    ).bind(date).first();
+    if (running) return;
     ctx.waitUntil(startEdition(env, date));
   },
 };

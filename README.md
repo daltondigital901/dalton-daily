@@ -4,7 +4,8 @@ A private, one-reader morning newspaper. Standalone project: its own Worker, D1 
 
 ## How it works
 
-- **3:00 AM Central** every day, a cron starts a Cloudflare Workflow for that date.
+- Printed **by 3:00 AM Central** every day: a cron starts the Workflow at 2:00 AM, with a backup attempt at 2:30 AM if the first did not land.
+- Reporters are told to source beyond U.S. legacy media: primary documents, foreign press, investigative outlets and independent newsletters. Each source is tagged by kind.
 - The Workflow reports 17 sections (6 at a time). Each section is one Claude API call with the web search tool, returning JSON stories. Each section is its own durable step with retries, so one failure never blocks the paper.
 - The 5 most important stories (one per section max) make the front page.
 - Comics: xkcd (JSON API), Existential Comics and SMBC (publishers' RSS), Calvin and Hobbes (link to the GoComics daily strip).

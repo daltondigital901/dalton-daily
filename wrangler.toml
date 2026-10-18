@@ -3,15 +3,16 @@ main = "src/index.js"
 compatibility_date = "2026-10-01"
 workers_dev = true
 
-# 3:00 AM Central year-round: both UTC slots fire, the handler only runs the one that lands at 3 AM in Chicago.
+# Printed by 3:00 AM Central: first attempt at 2:00 AM, backup attempt at 2:30 AM if the first did not land.
+# Both UTC slots fire year-round; the handler only acts in the slot that is 2 AM in Chicago (handles DST).
 [triggers]
-crons = ["0 8 * * *", "0 9 * * *"]
+crons = ["0 7 * * *", "30 7 * * *", "0 8 * * *", "30 8 * * *"]
 
 [vars]
 MODEL = "claude-sonnet-5-5"
 TIMEZONE = "America/Chicago"
-EDITION_HOUR = "3"
-SEARCHES_PER_SECTION = "5"
+EDITION_HOUR = "2"
+SEARCHES_PER_SECTION = "7"
 
 [[d1_databases]]
 binding = "DB"

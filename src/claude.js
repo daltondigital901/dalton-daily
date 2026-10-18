@@ -2,6 +2,7 @@
 import { READER_PROFILE } from "./sections.js";
 
 const API = "https://api.anthropic.com/v1/messages";
+const KINDS = ["primary", "wire", "legacy", "foreign", "investigative", "independent"];
 
 export async function callClaude(env, { system, prompt, tools = [], maxTokens = 8000 }) {
   const messages = [{ role: "user", content: prompt }];
@@ -60,8 +61,12 @@ function cleanStory(s) {
   const sources = Array.isArray(s.sources)
     ? s.sources
         .filter((x) => x && typeof x.url === "string" && /^https?:\/\//.test(x.url))
-        .map((x) => ({ name: String(x.name || new URL(x.url).hostname.replace(/^www\./, "")), url: x.url }))
-        .slice(0, 4)
+        .map((x) => ({
+          name: String(x.name || new URL(x.url).hostname.replace(/^www\./, "")),
+          url: x.url,
+          kind: KINDS.includes(x.kind) ? x.kind : "",
+        }))
+        .slice(0, 5)
     : [];
   return {
     headline: String(s.headline || "").trim(),
@@ -86,6 +91,19 @@ export async function reportSection(env, section, ctx) {
     "- Write every summary in your own words. Do not copy sentences from sources; a quoted phrase must be under 12 words and rare.",
     "- Neutral, factual, newspaper tone. On contested political subjects present the facts and the main positions fairly without taking sides.",
     "- Every story needs at least one source URL that you actually found in search results.",
+    "Sourcing (important): do not rely only on U.S. legacy media. For each section, actively search beyond it:",
+    "  * Primary sources first where they exist: court opinions and filings (supremecourt.gov, CourtListener, PACER summaries), government releases,",
+    "    the Federal Register, congress.gov, SEC/EDGAR filings, central-bank statements, agency data, peer-reviewed papers and arXiv/medRxiv preprints,",
+    "    official mission pages (NASA, ESA), company filings and press releases.",
+    "  * Foreign and regional press: e.g. The Guardian, BBC, Financial Times, Le Monde, Der Spiegel, Al Jazeera, Haaretz, Times of Israel, Kyiv Independent,",
+    "    Meduza, South China Morning Post, Nikkei Asia, Caixin, The Hindu, Dawn, Africa Report, Folha, El País, Reuters and AFP wires.",
+    "  * Investigative and specialist outlets: ProPublica, Bellingcat, ICIJ, OCCRP, The Intercept, Lawfare, Just Security, War on the Rocks, Semafor,",
+    "    404 Media, Rest of World, The Information, and serious trade press.",
+    "  * Independent writers and newsletters (Substack and similar) with real expertise or original reporting.",
+    "- Aim for a mix: across a section's stories, include at least one primary source and at least one non-U.S. or independent/investigative source when they exist.",
+    "- Prefer the original over a rewrite: link the court filing, the study, the foreign outlet that broke it, not the aggregator.",
+    "- Treat newsletters and partisan outlets as claims, not facts: say who is claiming what, and note when something is not independently confirmed.",
+    "- For each source, give its kind: primary, wire, legacy, foreign, investigative, independent.",
     "- Return ONLY a JSON object wrapped in <json></json> tags. No other prose.",
   ].join("\n");
 
@@ -104,7 +122,7 @@ export async function reportSection(env, section, ctx) {
     disliked.length ? `The reader disliked these past stories (less like this):\n- ${disliked.join("\n- ")}` : "",
     "",
     "JSON shape:",
-    `<json>{"stories":[{"headline":"Short newspaper headline, under 14 words","dek":"One-line subheadline","dateline":"CITY or blank","body":"Summary of 90-150 words in your own words: what happened, key numbers, who, and what comes next","why":"One sentence on why it matters","importance":1-10 (10 = front-page news anywhere),"update":false,"sources":[{"name":"Outlet name","url":"https://..."}]}]}</json>`,
+    `<json>{"stories":[{"headline":"Short newspaper headline, under 14 words","dek":"One-line subheadline","dateline":"CITY or blank","body":"Summary of 90-150 words in your own words: what happened, key numbers, who, and what comes next","why":"One sentence on why it matters","importance":1-10 (10 = front-page news anywhere),"update":false,"sources":[{"name":"Outlet or document name","url":"https://...","kind":"primary|wire|legacy|foreign|investigative|independent"}]}]}</json>`,
   ]
     .filter(Boolean)
     .join("\n\n");

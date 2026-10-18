@@ -46,6 +46,7 @@ nav.index a:hover{color:var(--accent)}
 .why b{font-family:"Libre Franklin",Arial,sans-serif;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink)}
 .src{font-family:"Libre Franklin",Arial,sans-serif;font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center}
 .src a{color:var(--muted)}
+.kind{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--hair);padding:0 4px;color:var(--accent)}
 .upd{display:inline-block;background:var(--accent);color:var(--paper);font-family:"Libre Franklin",Arial,sans-serif;font-size:10px;font-weight:700;letter-spacing:.1em;padding:1px 5px;margin-right:6px;vertical-align:middle}
 .vote{margin-left:auto;display:inline-flex;gap:4px}
 .vote button{font:inherit;font-size:12px;background:none;border:1px solid var(--hair);color:var(--muted);padding:1px 7px;cursor:pointer;border-radius:2px}
@@ -152,7 +153,9 @@ function paragraphs(body = "", dateline) {
 }
 
 function sourcesLine(s) {
-  const links = s.sources.map((x) => `<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name)}</a>`).join(" &middot; ");
+  const links = s.sources
+    .map((x) => `<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name)}</a>${x.kind && x.kind !== "legacy" && x.kind !== "wire" ? ` <span class="kind">${esc(x.kind)}</span>` : ""}`)
+    .join(" &middot; ");
   return `<div class="src">${links}<span class="vote" data-id="${esc(s.id)}" data-section="${esc(s.section)}"><button data-v="1" title="More like this">&#9650;</button><button data-v="-1" title="Less like this">&#9660;</button></span></div>`;
 }
 
