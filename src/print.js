@@ -48,6 +48,16 @@ function weatherBox(ed) {
   return w ? `<div class="ear"><b>Memphis Weather</b>${esc(w.sky)}<br>High ${w.high}&deg; &middot; Low ${w.low}&deg;<br>Rain ${w.rain}%</div>` : `<div class="ear"></div>`;
 }
 
+// Front-page briefs run the opening of a story and jump to its section, as a newspaper does.
+function frontBrief(s) {
+  const words = String(s.body || "").split(/\s+/);
+  const opening = words.slice(0, 55).join(" ") + (words.length > 55 ? "…" : "");
+  const desk = DESKS.find((d) => d.key === BY_KEY[s.section]?.desk);
+  return `<article class="st brief"><div class="kicker">${esc(BY_KEY[s.section]?.name || "")}</div><h3>${esc(s.headline)}</h3>
+    ${photo(s, "small")}<div class="body"><p>${s.dateline ? `<b class="dl">${esc(s.dateline)} &mdash;</b> ` : ""}${esc(opening)}</p></div>
+    <p class="jump">Continued in ${esc(desk?.name || "")}</p></article>`;
+}
+
 function frontPage(ed) {
   const all = Object.values(ed.sections).flat();
   const byId = Object.fromEntries(all.map((s) => [s.id, s]));
@@ -70,7 +80,7 @@ function frontPage(ed) {
       <div class="lead-grid">${lead.image?.src ? `<div>${photo(lead, "hero")}</div>` : ""}
         <div class="body two">${paras(lead.body, lead.dateline)}${lead.why ? `<p class="why"><b>Why it matters:</b> ${esc(lead.why)}</p>` : ""}${srcLine(lead)}</div></div>
     </article>` : ""}
-    <div class="front-cols">${rest.map((s) => `<div class="kicker">${esc(BY_KEY[s.section]?.name || "")}</div>${story(s)}`).join("")}</div>
+    <div class="front-cols">${rest.map((s) => frontBrief(s)).join("")}</div>
     <aside class="inside"><h4>Inside Today</h4><ul>${inside}</ul></aside>
   </section>`;
 }
@@ -127,7 +137,7 @@ function reflectionsPage(ed) {
 function comicsPage(ed) {
   const strips = (ed.comics || []).filter((c) => c.images?.length);
   if (!strips.length) return "";
-  const order = ["xkcd", "pdl", "smbc", "existential"];
+  const order = ["xkcd", "pdl", "existential", "smbc"];
   strips.sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key));
   return `<section class="pg comics-pg">
     ${folio(ed, "The Funnies")}
@@ -157,9 +167,11 @@ h1,h2,h3,h4,h5{font-family:"Playfair Display",Georgia,serif;margin:0;font-weight
 .why b{font-family:"Libre Franklin",Arial,sans-serif;font-size:6.6pt;text-transform:uppercase;letter-spacing:.08em}
 .src{font-family:"Libre Franklin",Arial,sans-serif;font-size:6.2pt;color:#555;text-align:left;margin-top:2pt}
 figure.ph{margin:0 0 5pt}
-figure.ph img{display:block;width:100%;height:auto;max-height:3.2in;object-fit:cover;filter:grayscale(1) contrast(1.12) brightness(1.02)}
+figure.ph img{display:block;width:100%;height:1.55in;object-fit:cover;filter:grayscale(1) contrast(1.12) brightness(1.02)}
+figure.ph.small img{height:1.25in}
+.fphoto figure.ph img{height:3.4in}
 figure.ph figcaption{font-family:"Libre Franklin",Arial,sans-serif;font-size:5.8pt;color:#555;text-align:right;margin-top:1.5pt}
-figure.ph.hero img{max-height:5.4in;aspect-ratio:4/3}
+figure.ph.hero img{height:4.6in}
 /* Front page */
 .mast{display:grid;grid-template-columns:1.6in 1fr 1.6in;align-items:center;gap:10pt;padding-bottom:4pt}
 .ear{font-family:"Libre Franklin",Arial,sans-serif;font-size:7.4pt;line-height:1.35;border-top:1.5pt solid #111;border-bottom:.6pt solid #111;padding:4pt 2pt}
@@ -168,10 +180,13 @@ figure.ph.hero img{max-height:5.4in;aspect-ratio:4/3}
 .title{font-family:"UnifrakturMaguntia",serif;font-size:82pt;line-height:.95;text-align:center}
 .motto{text-align:center;font-style:italic;font-size:9.5pt;color:#333;margin-top:2pt}
 .dateline{display:flex;justify-content:space-between;border-top:3pt double #111;border-bottom:.8pt solid #111;padding:3pt 1pt;font-size:7.4pt;margin-bottom:8pt}
-.front-lead h1{font-size:40pt;line-height:1.02;margin:2pt 0 3pt}
+.front-lead h1{font-size:36pt;line-height:1.02;margin:2pt 0 3pt}
 .lead-grid{display:grid;grid-template-columns:1.05fr 1fr;gap:12pt;margin-top:4pt;padding-bottom:8pt;border-bottom:.8pt solid #111}
 .body.two{column-count:2;column-gap:12pt;column-rule:.4pt solid #999}
-.front-cols{column-count:4;column-gap:12pt;column-rule:.4pt solid #999;margin-top:8pt}
+.front-cols{display:grid;grid-template-columns:repeat(4,1fr);gap:0 12pt;margin-top:8pt}
+.front-cols .st{border-bottom:0;padding:0 0 0 12pt;border-left:.4pt solid #999}
+.front-cols .st:first-child{border-left:0;padding-left:0}
+.jump{font-family:"Libre Franklin",Arial,sans-serif;font-size:6.6pt;font-weight:700;text-transform:uppercase;letter-spacing:.08em;text-align:left}
 .front-cols h3{font-size:15pt}
 .inside{margin-top:8pt;border-top:3pt double #111;padding-top:5pt;break-inside:avoid}
 .inside h4{font-size:8pt;margin-bottom:4pt}
@@ -185,9 +200,9 @@ figure.ph.hero img{max-height:5.4in;aspect-ratio:4/3}
 .feature{display:grid;grid-template-columns:1.1fr 1fr;gap:12pt;padding-bottom:8pt;margin-bottom:8pt;border-bottom:.8pt solid #111;break-inside:avoid}
 .feature:not(:has(.fphoto)){grid-template-columns:1fr}
 .feature h2{font-size:24pt;line-height:1.04;margin-bottom:2pt}
-.cols{column-count:5;column-gap:11pt;column-rule:.4pt solid #999;column-fill:balance}
+.cols{column-count:5;column-gap:11pt;column-rule:.4pt solid #999;column-fill:auto}
 .seclabel{column-span:all;font-size:7.6pt;font-weight:700;border-top:1.4pt solid #111;border-bottom:.4pt solid #999;padding:2pt 0;margin:4pt 0 6pt}
-.st{margin:0 0 8pt;padding-bottom:6pt;border-bottom:.4pt solid #bbb}
+.st{margin:0 0 7pt;padding-bottom:5pt;border-bottom:.4pt solid #bbb}
 .st h3{font-size:12.5pt;line-height:1.08;margin-bottom:2pt}
 .st .body p:first-child::first-letter{font-weight:700}
 .markets{break-inside:avoid;border:.8pt solid #111;padding:5pt;margin-bottom:8pt}
@@ -207,9 +222,9 @@ figure.ph.hero img{max-height:5.4in;aspect-ratio:4/3}
 .refl p{text-align:left}
 .verse sup{font-style:normal;font-size:6pt;margin-right:1pt}
 /* Comics */
-.comics{display:flex;flex-direction:column;align-items:center;gap:14pt}
-.strip{text-align:center;width:100%;break-inside:avoid}
-.strip img{display:block;margin:0 auto 4pt;max-width:100%;max-height:6.6in;width:auto}
+.comics{column-count:2;column-gap:18pt;column-rule:.4pt solid #999}
+.strip{text-align:center;width:100%;break-inside:avoid;margin-bottom:14pt}
+.strip img{display:block;margin:0 auto 4pt;max-width:100%;max-height:7.2in;width:auto}
 .strip .name{font-family:"Playfair Display",Georgia,serif;font-weight:900;font-size:14pt;margin:0;text-align:center}
 .strip .name span{font-family:"Libre Franklin",Arial,sans-serif;font-weight:400;font-size:7pt;text-transform:uppercase;letter-spacing:.1em}
 .strip .ttl{font-style:italic;text-align:center;margin:0 0 4pt}
