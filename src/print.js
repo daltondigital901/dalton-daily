@@ -17,7 +17,7 @@ const paras = (t = "", dateline = "") =>
 function photo(s, cls = "") {
   if (!s.image?.src) return "";
   const fb = s.image.fallback ? ` data-fallback="${esc(s.image.fallback)}"` : "";
-  return `<figure class="ph ${cls}"><img src="${esc(s.image.src)}"${fb} alt=""><figcaption>${esc(s.image.credit || "")}</figcaption></figure>`;
+  return `<figure class="ph ${cls}"><img src="${esc(s.image.src)}"${fb} alt="" referrerpolicy="no-referrer"><figcaption>${esc(s.image.credit || "")}</figcaption></figure>`;
 }
 const srcLine = (s) => (s.sources?.length ? `<p class="src">Sources: ${s.sources.slice(0, 3).map((x) => esc(x.name)).join("; ")}</p>` : "");
 
@@ -144,7 +144,7 @@ function comicsPage(ed) {
     <h2 class="deskname">The Funnies</h2>
     <div class="comics">${strips
       .map((c) => `<div class="strip k-${esc(c.key)}"><p class="name">${esc(c.strip)} <span>&middot; ${esc(c.author)}</span></p><p class="ttl">${esc(c.title)}</p>
-        ${c.images.map((src) => `<img src="${esc(src)}" alt="">`).join("")}${c.caption ? `<p class="cap">${esc(c.caption)}</p>` : ""}</div>`)
+        ${c.images.map((src) => `<img src="${esc(src)}" alt="" referrerpolicy="no-referrer">`).join("")}${c.caption ? `<p class="cap">${esc(c.caption)}</p>` : ""}</div>`)
       .join("")}</div>
   </section>`;
 }
@@ -240,8 +240,17 @@ document.querySelectorAll('img').forEach(function(img){
 });
 </script>`;
 
-export function renderPrint(ed, quotes = []) {
-  const pages = [frontPage(ed), ...DESKS.map((d) => deskPage(ed, d, quotes)), reflectionsPage(ed), comicsPage(ed)].filter(Boolean).join("");
+// Part names the renderer can request one at a time (?only=...), in printing order.
+export const PRINT_PARTS = ["front", ...DESKS.map((d) => d.slug), "reflections", "comics"];
+
+export function renderPrint(ed, quotes = [], only = "") {
+  const parts = {
+    front: () => frontPage(ed),
+    reflections: () => reflectionsPage(ed),
+    comics: () => comicsPage(ed),
+    ...Object.fromEntries(DESKS.map((d) => [d.slug, () => deskPage(ed, d, quotes)])),
+  };
+  const pages = (only && parts[only] ? [parts[only]()] : PRINT_PARTS.map((k) => parts[k]())).filter(Boolean).join("");
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Dalton Daily — Print Edition — ${esc(ed.longDate)}</title>
 <meta name="robots" content="noindex">
 <link href="https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&family=Playfair+Display:wght@700;900&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,700;1,8..60,400&family=Libre+Franklin:wght@400;700&display=block" rel="stylesheet">

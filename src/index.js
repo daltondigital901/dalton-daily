@@ -65,7 +65,7 @@ export default {
       const ed = await latestEdition(env, pm[1]);
       if (!ed) return new Response("No edition", { status: 404 });
       const q = await buildQuotes().catch(() => ({ quotes: [] }));
-      return new Response(renderPrint(ed, q.quotes), { headers: { "content-type": "text/html; charset=utf-8", "x-robots-tag": "noindex" } });
+      return new Response(renderPrint(ed, q.quotes, url.searchParams.get("only") || ""), { headers: { "content-type": "text/html; charset=utf-8", "x-robots-tag": "noindex" } });
     }
     if (url.pathname === "/robots.txt") {
       return new Response(`User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /api/\nDisallow: /print\n\nSitemap: ${SITE}/sitemap.xml\n`, { headers: { "content-type": "text/plain" } });
