@@ -5,91 +5,142 @@ const esc = (s = "") =>
   String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 const SECTION_BY_KEY = Object.fromEntries(SECTIONS.map((s) => [s.key, s]));
+const label = (s) => SECTION_BY_KEY[s.section]?.name || "";
 
 const CSS = `
-:root{--paper:#f5f1e6;--ink:#161412;--muted:#5d564c;--rule:#1f1c18;--hair:#bdb4a3;--accent:#8a1c12;--card:#efe9da}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--paper:#191816;--ink:#e9e3d6;--muted:#a59d8f;--rule:#d9d2c3;--hair:#4a463f;--accent:#e0705f;--card:#211f1c}}
-:root[data-theme="dark"]{--paper:#191816;--ink:#e9e3d6;--muted:#a59d8f;--rule:#d9d2c3;--hair:#4a463f;--accent:#e0705f;--card:#211f1c}
+:root{--paper:#f6f2e8;--ink:#17140f;--muted:#5f574b;--rule:#211d17;--hair:#cbc2b1;--accent:#8a1c12;--card:#efe8d8;--photo:#e4ddcc}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--paper:#181714;--ink:#ebe5d8;--muted:#a69e90;--rule:#dcd5c6;--hair:#46423b;--accent:#e2735f;--card:#201e1a;--photo:#2a2723}}
+:root[data-theme="dark"]{--paper:#181714;--ink:#ebe5d8;--muted:#a69e90;--rule:#dcd5c6;--hair:#46423b;--accent:#e2735f;--card:#201e1a;--photo:#2a2723}
 *{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--paper);color:var(--ink);font-family:"Source Serif 4",Georgia,serif;font-size:17px;line-height:1.5}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"Source Serif 4",Georgia,serif;font-size:17px;line-height:1.52;font-optical-sizing:auto}
 a{color:inherit}
-.page{max-width:1240px;margin:0 auto;padding:20px 16px 60px}
-.mast{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px;padding-bottom:10px}
-.ear{font-family:"Libre Franklin",Arial,sans-serif;font-size:12px;line-height:1.35;color:var(--muted);border:1px solid var(--hair);padding:8px 10px;max-width:220px}
-.ear b{display:block;color:var(--ink);letter-spacing:.08em;text-transform:uppercase;font-size:11px;margin-bottom:2px}
+.page{max-width:1280px;margin:0 auto;padding:22px 20px 70px}
+
+/* Masthead */
+.mast{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:18px;padding-bottom:12px}
+.ear{font-family:"Libre Franklin",Arial,sans-serif;font-size:12px;line-height:1.4;color:var(--muted);border-top:2px solid var(--rule);border-bottom:1px solid var(--rule);padding:7px 2px;max-width:210px}
+.ear b{display:block;color:var(--ink);letter-spacing:.12em;text-transform:uppercase;font-size:10.5px;margin-bottom:3px}
 .ear.right{justify-self:end;text-align:right}
-.title{font-family:"UnifrakturMaguntia",serif;font-weight:400;font-size:clamp(46px,9vw,104px);line-height:1;margin:0;text-align:center;letter-spacing:.01em}
+.title{font-family:"UnifrakturMaguntia",serif;font-weight:400;font-size:clamp(50px,9.5vw,112px);line-height:.95;margin:0;text-align:center}
 .title a{text-decoration:none}
-.motto{text-align:center;font-style:italic;color:var(--muted);font-size:14px;margin-top:4px}
-.dateline{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:3px double var(--rule);border-bottom:1px solid var(--rule);padding:6px 2px;font-family:"Libre Franklin",Arial,sans-serif;font-size:12px;letter-spacing:.12em;text-transform:uppercase}
-nav.index{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 18px;padding:8px 0;border-bottom:1px solid var(--hair);font-family:"Libre Franklin",Arial,sans-serif;font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+.motto{text-align:center;font-style:italic;color:var(--muted);font-size:14px;margin-top:6px}
+.dateline{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:4px double var(--rule);border-bottom:1px solid var(--rule);padding:7px 2px;font-family:"Libre Franklin",Arial,sans-serif;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase}
+nav.index{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 20px;padding:9px 0;border-bottom:1px solid var(--hair);font-family:"Libre Franklin",Arial,sans-serif;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase}
 nav.index a{text-decoration:none;color:var(--muted)}
 nav.index a:hover{color:var(--accent)}
-.front{display:grid;grid-template-columns:2fr 1fr;gap:0;margin-top:18px;border-bottom:3px double var(--rule);padding-bottom:18px}
-.lead{padding-right:22px;border-right:1px solid var(--hair)}
-.lead h2{font-family:"Playfair Display",Georgia,serif;font-weight:900;font-size:clamp(30px,4.4vw,52px);line-height:1.05;margin:4px 0 10px}
-.lead .dek{font-size:21px}
-.lead .body{column-count:2;column-gap:22px;column-rule:1px solid var(--hair)}
-.lead .body p:first-child:not(:has(.dl))::first-letter{font-family:"Playfair Display",Georgia,serif;float:left;font-size:64px;line-height:.85;padding:6px 8px 0 0;font-weight:900}
-.side{padding-left:22px}
-.side .brief{padding:0 0 14px;margin:0 0 14px;border-bottom:1px solid var(--hair)}
-.side .brief:last-child{border-bottom:0;margin-bottom:0}
-.side h3{font-family:"Playfair Display",Georgia,serif;font-size:22px;line-height:1.15;margin:2px 0 6px}
-.side h3 a{text-decoration:none}
-.side h3 a:hover{text-decoration:underline}
-.kicker{font-family:"Libre Franklin",Arial,sans-serif;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
-.dek{font-style:italic;color:var(--muted);margin:0 0 8px;line-height:1.35}
-.body p{margin:0 0 10px;text-align:justify;hyphens:auto}
-.dl{font-family:"Libre Franklin",Arial,sans-serif;font-weight:700;font-size:12px;letter-spacing:.08em;text-transform:uppercase}
-.why{font-size:15px;color:var(--muted);border-left:3px solid var(--accent);padding:2px 0 2px 10px;margin:8px 0}
-.why b{font-family:"Libre Franklin",Arial,sans-serif;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink)}
-.src{font-family:"Libre Franklin",Arial,sans-serif;font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center}
+
+/* Shared type */
+.kicker{font-family:"Libre Franklin",Arial,sans-serif;font-size:10.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:5px}
+h2,h3,h4{font-family:"Playfair Display",Georgia,serif;font-weight:700;margin:0;text-wrap:balance}
+h4 a,h3 a{text-decoration:none}
+h4 a:hover,h3 a:hover{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
+.dek{font-style:italic;color:var(--muted);margin:6px 0 10px;line-height:1.38;text-wrap:pretty}
+.body p{margin:0 0 10px;text-align:justify;hyphens:auto;text-wrap:pretty}
+.dl{font-family:"Libre Franklin",Arial,sans-serif;font-weight:700;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase}
+.why{font-size:15px;color:var(--muted);border-left:2px solid var(--accent);padding:1px 0 1px 10px;margin:8px 0 10px}
+.why b{font-family:"Libre Franklin",Arial,sans-serif;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);margin-right:4px}
+.src{font-family:"Libre Franklin",Arial,sans-serif;font-size:11.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:3px 9px;align-items:center}
 .src a{color:var(--muted)}
-.kind{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--hair);padding:0 4px;color:var(--accent)}
-.upd{display:inline-block;background:var(--accent);color:var(--paper);font-family:"Libre Franklin",Arial,sans-serif;font-size:10px;font-weight:700;letter-spacing:.1em;padding:1px 5px;margin-right:6px;vertical-align:middle}
+.kind{font-size:8.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;border:1px solid var(--hair);padding:0 4px;color:var(--accent)}
+.upd{display:inline-block;background:var(--accent);color:var(--paper);font-family:"Libre Franklin",Arial,sans-serif;font-size:9.5px;font-weight:700;letter-spacing:.12em;padding:2px 5px;margin-right:7px;vertical-align:.25em}
 .vote{margin-left:auto;display:inline-flex;gap:4px}
-.vote button{font:inherit;font-size:12px;background:none;border:1px solid var(--hair);color:var(--muted);padding:1px 7px;cursor:pointer;border-radius:2px}
+.vote button{font:inherit;font-size:11px;background:none;border:1px solid var(--hair);color:var(--muted);padding:0 7px;cursor:pointer;border-radius:2px;line-height:1.7}
 .vote button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-.desk{margin-top:30px}
-.desk>h2{font-family:"Playfair Display",Georgia,serif;font-weight:900;text-transform:uppercase;letter-spacing:.06em;font-size:26px;text-align:center;margin:0;padding:6px 0;border-top:3px solid var(--rule);border-bottom:1px solid var(--rule)}
-.sec{margin-top:16px}
-.sec>h3{font-family:"Libre Franklin",Arial,sans-serif;font-size:13px;letter-spacing:.16em;text-transform:uppercase;margin:0 0 10px;padding-bottom:4px;border-bottom:1px solid var(--hair);color:var(--accent)}
-.cols{column-count:3;column-gap:26px;column-rule:1px solid var(--hair)}
-.story{break-inside:avoid;margin:0 0 18px;padding-bottom:14px;border-bottom:1px solid var(--hair)}
-.story h4{font-family:"Playfair Display",Georgia,serif;font-size:22px;line-height:1.15;margin:0 0 6px}
-.story.top h4{font-size:27px}
-.missing{font-style:italic;color:var(--muted)}
-.comics{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:16px}
-.strip{background:var(--card);border:1px solid var(--rule);padding:12px}
-.strip .name{font-family:"Playfair Display",Georgia,serif;font-weight:900;font-size:20px;margin:0}
-.strip .by{font-family:"Libre Franklin",Arial,sans-serif;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
-.strip .ttl{font-style:italic;margin:0 0 8px}
-.strip img{display:block;width:100%;height:auto;background:#fff;margin:0 0 8px;border:1px solid var(--hair)}
-.strip .cap{font-size:14px;color:var(--muted);margin:0 0 6px}
-.strip .go{display:inline-block;margin-top:6px;font-family:"Libre Franklin",Arial,sans-serif;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;text-decoration:none;border:1px solid var(--ink);padding:6px 10px}
-.strip.wide{grid-column:1/-1}
-.reflect{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-top:22px;border:1px solid var(--rule);background:var(--card)}
-.reflect>div{padding:16px 18px}
+
+/* Photos */
+figure.ph{margin:0 0 12px}
+figure.ph .frame{background:var(--photo);overflow:hidden}
+figure.ph img{display:block;width:100%;height:100%;aspect-ratio:3/2;object-fit:cover;filter:saturate(.88) contrast(1.04);transition:filter .3s}
+figure.ph.wide img{aspect-ratio:16/9}
+figure.ph:hover img{filter:none}
+figure.ph figcaption{font-family:"Libre Franklin",Arial,sans-serif;font-size:10.5px;letter-spacing:.04em;color:var(--muted);margin-top:5px;text-align:right}
+
+/* Front page */
+.front{display:grid;grid-template-columns:minmax(0,2.1fr) minmax(0,1fr);margin-top:20px;padding-bottom:22px;border-bottom:4px double var(--rule)}
+.lead{padding-right:26px;border-right:1px solid var(--hair)}
+.lead h2{font-size:clamp(32px,4.4vw,54px);line-height:1.04;font-weight:900;letter-spacing:-.01em}
+.lead .dek{font-size:21px}
+.lead .body{column-count:2;column-gap:26px;column-rule:1px solid var(--hair)}
+.lead .body p:first-child:not(:has(.dl))::first-letter{font-family:"Playfair Display",Georgia,serif;float:left;font-size:66px;line-height:.84;padding:6px 8px 0 0;font-weight:900}
+.side{padding-left:26px;display:flex;flex-direction:column}
+.side .brief{padding:0 0 15px;margin:0 0 15px;border-bottom:1px solid var(--hair)}
+.side .brief:last-child{border-bottom:0;margin-bottom:0;padding-bottom:0}
+.side h3{font-size:22px;line-height:1.16}
+.side .brief:first-child h3{font-size:25px}
+
+/* In pictures */
+.pics{margin-top:24px}
+.band{display:flex;align-items:center;gap:14px;margin:0 0 14px;font-family:"Libre Franklin",Arial,sans-serif;font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase}
+.band::before,.band::after{content:"";flex:1;border-top:1px solid var(--rule)}
+.pics .row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:22px}
+.pics h4{font-size:19px;line-height:1.2}
+.pics figure.ph img{aspect-ratio:4/3}
+
+/* Reflections */
+.reflect{display:grid;grid-template-columns:1fr 1fr;margin-top:28px;border-top:2px solid var(--rule);border-bottom:2px solid var(--rule);background:var(--card)}
+.reflect>div{padding:20px 24px}
 .reflect>div+div{border-left:1px solid var(--hair)}
-.reflect h3{font-family:"Playfair Display",Georgia,serif;font-size:24px;line-height:1.15;margin:4px 0 8px}
-.reflect .ref{font-family:"Libre Franklin",Arial,sans-serif;font-weight:700;font-size:13px;letter-spacing:.06em}
-.verse{font-style:italic;margin:0 0 10px;line-height:1.55}
+.reflect h3{font-size:25px;line-height:1.15;margin:2px 0 8px}
+.reflect .ref{font-family:"Libre Franklin",Arial,sans-serif;font-weight:700;font-size:12.5px;letter-spacing:.05em;margin-bottom:10px}
+.verse{font-style:italic;margin:0 0 12px;line-height:1.6;font-size:18px}
 .verse sup{font-style:normal;font-size:10px;color:var(--muted);margin-right:3px}
 .reflect .body p{text-align:left}
 .reflect .note{font-size:15px;margin:8px 0}
-.reflect .note b{font-family:"Libre Franklin",Arial,sans-serif;font-size:11px;letter-spacing:.1em;text-transform:uppercase}
-footer{margin-top:40px;border-top:3px double var(--rule);padding-top:10px;font-family:"Libre Franklin",Arial,sans-serif;font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:8px 18px;justify-content:space-between}
+.reflect .note b{font-family:"Libre Franklin",Arial,sans-serif;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;margin-right:4px}
+
+/* Desks and sections */
+.desk{margin-top:44px}
+.desk>h2{font-weight:900;text-transform:uppercase;letter-spacing:.08em;font-size:28px;text-align:center;padding:8px 0 7px;border-top:4px double var(--rule);border-bottom:1px solid var(--rule)}
+.sec{margin-top:22px}
+.sec>h3{display:flex;align-items:center;gap:12px;font-family:"Libre Franklin",Arial,sans-serif;font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin:0 0 14px}
+.sec>h3::after{content:"";flex:1;border-top:1px solid var(--hair)}
+.grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:0 28px}
+.c6{grid-column:span 6}.c3{grid-column:span 3}.c2{grid-column:span 2}
+.feat h4{font-size:31px;line-height:1.1;font-weight:900}
+.feat .dek{font-size:18.5px}
+.feat .body{column-count:2;column-gap:26px;column-rule:1px solid var(--hair)}
+.feat.c6 .body{column-count:3}
+.feat.c6.split{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:0 30px;align-items:start}
+.feat.c6.split .body{column-count:1}
+.story h4{font-size:21px;line-height:1.17}
+.cell{border-top:1px solid var(--hair);padding-top:16px;margin-top:22px}
+.cell h4{font-size:22px}
+.cell.top{border-top:0;padding-top:0;margin-top:0}
+.feat.cell h4{font-size:27px}
+.story .body::after{content:"";display:table;clear:both}
+.missing{font-style:italic;color:var(--muted)}
+
+/* Comics */
+.comics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;margin-top:18px;align-items:start}
+.strip{border-top:2px solid var(--rule);padding-top:10px}
+.strip.wide{grid-column:1/-1}
+.strip .name{font-family:"Playfair Display",Georgia,serif;font-weight:900;font-size:22px;margin:0}
+.strip .by{font-family:"Libre Franklin",Arial,sans-serif;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:2px 0 8px}
+.strip .ttl{font-style:italic;margin:0 0 10px}
+.strip img{display:block;max-width:100%;height:auto;margin:0 auto 10px;background:#fff}
+.strip .cap{font-size:14.5px;color:var(--muted);margin:0 0 6px}
+.strip .go{font-family:"Libre Franklin",Arial,sans-serif;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+
+footer{margin-top:48px;border-top:4px double var(--rule);padding-top:10px;font-family:"Libre Franklin",Arial,sans-serif;font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:8px 18px;justify-content:space-between}
 .notice{background:var(--card);border:1px solid var(--hair);padding:10px 14px;margin-top:14px;font-size:15px}
 .archive{list-style:none;padding:0;column-count:3;column-gap:30px}
 .archive li{padding:6px 0;border-bottom:1px solid var(--hair);break-inside:avoid}
-@media (max-width:900px){.cols{column-count:2}.lead .body{column-count:1}}
+
+@media (max-width:1000px){
+ .pics .row{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .lead .body,.feat .body,.feat.c6 .body{column-count:1}
+ .c2{grid-column:span 3}
+ .feat.c6.split{grid-template-columns:1fr}
+}
 @media (max-width:700px){
- body{font-size:16px}
+ body{font-size:16.5px}.page{padding:16px 16px 60px}
  .mast{grid-template-columns:1fr}.ear{display:none}
- .front{grid-template-columns:1fr}.lead{padding-right:0;border-right:0;border-bottom:1px solid var(--hair);padding-bottom:14px}.side{padding-left:0;padding-top:14px}
- .cols{column-count:1}.comics{grid-template-columns:1fr}.reflect{grid-template-columns:1fr}.reflect>div+div{border-left:0;border-top:1px solid var(--hair)}.archive{column-count:1}
- .dateline{justify-content:center}
+ .front{grid-template-columns:1fr}.lead{padding-right:0;border-right:0;border-bottom:1px solid var(--hair);padding-bottom:16px}.side{padding-left:0;padding-top:16px}
+ .c3{grid-column:span 6}.feat.c6.split{display:block}
+ .reflect{grid-template-columns:1fr}.reflect>div+div{border-left:0;border-top:1px solid var(--hair)}
+ .comics{grid-template-columns:1fr}.archive{column-count:1}
+ .dateline{justify-content:center}.feat h4{font-size:27px}
 }
 `;
 
@@ -111,6 +162,14 @@ const SCRIPT = `
       .then(function(r){if(!r.ok)throw 0;v.querySelectorAll('button').forEach(function(x){x.classList.remove('on')});b.classList.add('on');store[id]=val;try{localStorage.setItem('dd_votes',JSON.stringify(store))}catch(e){}})
       .catch(function(){b.textContent='!'});
     });
+  });
+  // A photo that fails to load (or is a 1px tracker) disappears instead of leaving a hole.
+  function check(img){if(img.naturalWidth&&img.naturalWidth<80){drop(img)}}
+  function drop(img){var f=img.closest('figure');if(f)f.remove()}
+  document.querySelectorAll('figure.ph img').forEach(function(img){
+    img.addEventListener('error',function(){drop(img)});
+    img.addEventListener('load',function(){check(img)});
+    if(img.complete){img.naturalWidth?check(img):drop(img)}
   });
 })();
 </script>`;
@@ -152,6 +211,11 @@ function paragraphs(body = "", dateline) {
     .join("");
 }
 
+function photo(s, cls = "") {
+  if (!s.image?.src) return "";
+  return `<figure class="ph ${cls}"><div class="frame"><img src="${esc(s.image.src)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"></div><figcaption>${esc(s.image.credit || "")}</figcaption></figure>`;
+}
+
 function sourcesLine(s) {
   const links = s.sources
     .map((x) => `<a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name)}</a>${x.kind && x.kind !== "legacy" && x.kind !== "wire" ? ` <span class="kind">${esc(x.kind)}</span>` : ""}`)
@@ -159,43 +223,83 @@ function sourcesLine(s) {
   return `<div class="src">${links}<span class="vote" data-id="${esc(s.id)}" data-section="${esc(s.section)}"><button data-v="1" title="More like this">&#9650;</button><button data-v="-1" title="Less like this">&#9660;</button></span></div>`;
 }
 
-function storyBlock(s, top) {
-  return `<article class="story${top ? " top" : ""}" id="s-${esc(s.id)}">
-  <h4>${s.update ? '<span class="upd">UPDATE</span>' : ""}${esc(s.headline)}</h4>
-  ${s.dek ? `<p class="dek">${esc(s.dek)}</p>` : ""}
-  <div class="body">${paragraphs(s.body, s.dateline)}</div>
-  ${s.why ? `<p class="why"><b>Why it matters</b> ${esc(s.why)}</p>` : ""}
-  ${sourcesLine(s)}
-</article>`;
+const head = (s) => `${s.update ? '<span class="upd">UPDATE</span>' : ""}${esc(s.headline)}`;
+const dek = (s) => (s.dek ? `<p class="dek">${esc(s.dek)}</p>` : "");
+const why = (s) => (s.why ? `<p class="why"><b>Why it matters</b>${esc(s.why)}</p>` : "");
+
+// Story variants: the feature leads a section; cells fill the rows below it.
+function feature(s, span, extra = "") {
+  if (span === "c6" && s.image) {
+    return `<article class="story feat c6 split ${extra}" id="s-${esc(s.id)}">${photo(s, "wide")}<div>
+      <h4>${head(s)}</h4>${dek(s)}<div class="body">${paragraphs(s.body, s.dateline)}</div>${why(s)}${sourcesLine(s)}</div></article>`;
+  }
+  return `<article class="story feat ${span} ${extra}" id="s-${esc(s.id)}">${photo(s, "wide")}
+    <h4>${head(s)}</h4>${dek(s)}<div class="body">${paragraphs(s.body, s.dateline)}</div>${why(s)}${sourcesLine(s)}</article>`;
+}
+
+function cell(s, span, extra = "") {
+  return `<article class="story cell ${span} ${extra}" id="s-${esc(s.id)}">${photo(s)}<h4>${head(s)}</h4>${dek(s)}
+    <div class="body">${paragraphs(s.body, s.dateline)}</div>${why(s)}${sourcesLine(s)}</article>`;
+}
+
+// Lays a section out so rows stay balanced: a full-width feature (photo beside text), then the rest in even rows.
+function sectionGrid(stories) {
+  const order = stories.slice();
+  if (!order[0].image && order[1]?.image) [order[0], order[1]] = [order[1], order[0]]; // a picture leads when it can
+  if (order.length === 2) {
+    // Side by side only when both or neither carry a photo; otherwise stack so nothing sits beside a gap.
+    if (!!order[0].image === !!order[1].image) return `<div class="grid">${order.map((s) => cell(s, "c3", "top")).join("")}</div>`;
+    return `<div class="grid">${feature(order[0], "c6")}${feature(order[1], "c6", "cell")}</div>`;
+  }
+  const [feat, ...rest] = order;
+  let html = `<div class="grid">${feature(feat, "c6")}`;
+  if (rest.length === 1) html += feature(rest[0], "c6", "cell");
+  else {
+    const span = rest.length % 3 === 0 ? "c2" : "c3";
+    html += rest.map((s) => cell(s, span)).join("");
+  }
+  return html + "</div>";
+}
+
+function storiesById(ed) {
+  return Object.fromEntries(Object.values(ed.sections).flat().map((s) => [s.id, s]));
 }
 
 function frontPage(ed) {
-  const all = Object.values(ed.sections).flat();
-  const byId = Object.fromEntries(all.map((s) => [s.id, s]));
+  const byId = storiesById(ed);
   const picks = (ed.front || []).map((id) => byId[id]).filter(Boolean);
   if (!picks.length) return "";
   const [lead, ...rest] = picks;
-  const label = (s) => SECTION_BY_KEY[s.section]?.name || "";
   return `
 <section class="front" id="front">
   <div class="lead">
+    ${photo(lead, "wide")}
     <div class="kicker">${esc(label(lead))}</div>
-    <h2>${lead.update ? '<span class="upd">UPDATE</span>' : ""}${esc(lead.headline)}</h2>
+    <h2>${head(lead)}</h2>
     ${lead.dek ? `<p class="dek">${esc(lead.dek)}</p>` : ""}
     <div class="body">${paragraphs(lead.body, lead.dateline)}</div>
-    ${lead.why ? `<p class="why"><b>Why it matters</b> ${esc(lead.why)}</p>` : ""}
+    ${why(lead)}
     ${sourcesLine(lead)}
   </div>
   <div class="side">
     ${rest
       .map(
-        (s) => `<div class="brief"><div class="kicker">${esc(label(s))}</div>
-      <h3><a href="#s-${esc(s.id)}">${esc(s.headline)}</a></h3>
-      ${s.dek ? `<p class="dek">${esc(s.dek)}</p>` : ""}</div>`
+        (s, i) => `<div class="brief">${i === 0 ? photo(s) : ""}<div class="kicker">${esc(label(s))}</div>
+      <h3><a href="#s-${esc(s.id)}">${esc(s.headline)}</a></h3>${dek(s)}</div>`
       )
       .join("")}
   </div>
 </section>`;
+}
+
+function inPictures(ed) {
+  const byId = storiesById(ed);
+  const picks = (ed.pictures || []).map((id) => byId[id]).filter(Boolean);
+  if (picks.length < 2) return "";
+  const shown = picks.slice(0, picks.length >= 4 ? 4 : 2);
+  return `<section class="pics"><div class="band">In Pictures</div><div class="row">
+    ${shown.map((s) => `<div>${photo(s)}<div class="kicker">${esc(label(s))}</div><h4><a href="#s-${esc(s.id)}">${esc(s.headline)}</a></h4></div>`).join("")}
+  </div></section>`;
 }
 
 function reflections(ed) {
@@ -213,45 +317,42 @@ function reflections(ed) {
     ? `<div><div class="kicker">Daily SLAA Reading</div>
       <h3>${esc(sl.title)}</h3>
       <div class="ref">From <a href="${esc(sl.url)}" target="_blank" rel="noopener">${esc(sl.source)}</a></div>
-      <div class="body" style="margin-top:8px">${paragraphs(sl.reading)}</div>
-      ${sl.practice ? `<p class="note"><b>Today</b> ${esc(sl.practice)}</p>` : ""}
-      ${sl.question ? `<p class="note"><b>Reflect</b> ${esc(sl.question)}</p>` : ""}</div>`
+      <div class="body">${paragraphs(sl.reading)}</div>
+      ${sl.practice ? `<p class="note"><b>Today</b>${esc(sl.practice)}</p>` : ""}
+      ${sl.question ? `<p class="note"><b>Reflect</b>${esc(sl.question)}</p>` : ""}</div>`
     : `<div><div class="kicker">Daily SLAA Reading</div><p class="missing">Not available this morning.</p></div>`;
   return `<section class="reflect" id="reflections">${scripture}${slaa}</section>`;
 }
 
 function desks(ed) {
-  const frontIds = new Set((ed.front || []).slice(0, 1)); // lead story already printed in full
+  const leadId = (ed.front || [])[0]; // the lead story is already printed in full on the front page
   return DESKS.map((d) => {
-    const secs = SECTIONS.filter((s) => s.desk === d.key);
-    const inner = secs
+    const inner = SECTIONS.filter((s) => s.desk === d.key)
       .map((sec) => {
-        const stories = (ed.sections[sec.key] || []).filter((s) => !frontIds.has(s.id));
-        const content = stories.length
-          ? `<div class="cols">${stories.map((s, i) => storyBlock(s, i === 0)).join("")}</div>`
-          : `<p class="missing">${ed.errors?.[sec.key] ? "This section could not be filed this morning." : "No stories this morning."}</p>`;
-        return `<section class="sec" id="sec-${sec.key}"><h3>${esc(sec.name)}</h3>${content}</section>`;
+        const stories = (ed.sections[sec.key] || []).filter((s) => s.id !== leadId);
+        if (!stories.length) {
+          if (sec.optional && !ed.errors?.[sec.key]) return "";
+          return `<section class="sec" id="sec-${sec.key}"><h3>${esc(sec.name)}</h3><p class="missing">${ed.errors?.[sec.key] ? "This section could not be filed this morning." : "No stories this morning."}</p></section>`;
+        }
+        return `<section class="sec" id="sec-${sec.key}"><h3>${esc(sec.name)}</h3>${sectionGrid(stories)}</section>`;
       })
       .join("");
-    return `<section class="desk" id="desk-${d.key}"><h2>${esc(d.name)}</h2>${inner}</section>`;
+    return inner ? `<section class="desk" id="desk-${d.key}"><h2>${esc(d.name)}</h2>${inner}</section>` : "";
   }).join("");
 }
 
 function comicsPage(ed) {
   const strips = (ed.comics || [])
+    .filter((c) => !c.linkOnly && c.images?.length)
     .map((c) => {
-      if (c.linkOnly) {
-        return `<div class="strip"><p class="name">${esc(c.strip)}</p><div class="by">${esc(c.author)}</div>
-        <p class="cap">${esc(c.caption)}</p><a class="go" href="${esc(c.link)}" target="_blank" rel="noopener">Read today's strip &rarr;</a></div>`;
-      }
-      const imgs = c.images.map((src) => `<img src="${esc(src)}" alt="${esc(c.title)}" loading="eager" referrerpolicy="no-referrer">`).join("");
-      const wide = c.key === "existential" || c.key === "smbc";
+      const imgs = c.images.map((src) => `<img src="${esc(src)}" alt="${esc(c.title)}" loading="lazy" referrerpolicy="no-referrer">`).join("");
+      const wide = c.key === "existential";
       return `<div class="strip${wide ? " wide" : ""}"><p class="name">${esc(c.strip)}</p><div class="by">${esc(c.author)}${c.license ? ` &middot; ${esc(c.license)}` : ""}</div>
       <p class="ttl">${esc(c.title)}</p>${imgs}${c.caption ? `<p class="cap">${esc(c.caption)}</p>` : ""}
       <a class="go" href="${esc(c.link)}" target="_blank" rel="noopener">View at source &rarr;</a></div>`;
     })
     .join("");
-  return `<section class="desk" id="comics"><h2>The Funnies</h2><div class="comics">${strips}</div></section>`;
+  return strips ? `<section class="desk" id="comics"><h2>The Funnies</h2><div class="comics">${strips}</div></section>` : "";
 }
 
 export function renderEdition(ed, { notice } = {}) {
@@ -260,6 +361,7 @@ export function renderEdition(ed, { notice } = {}) {
 ${masthead(ed)}
 ${notice ? `<div class="notice">${notice}</div>` : ""}
 ${frontPage(ed)}
+${inPictures(ed)}
 ${reflections(ed)}
 ${desks(ed)}
 ${comicsPage(ed)}

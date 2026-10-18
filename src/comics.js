@@ -1,6 +1,5 @@
 // The funnies. xkcd (CC BY-NC 2.5) via its JSON API; SMBC and Existential Comics via their
 // publishers' own RSS feeds, displayed with attribution and a link back, the way a feed reader does.
-// Calvin and Hobbes has no feed; GoComics publishes the daily rerun, so it gets a link card.
 
 const UA = { "user-agent": "DaltonDaily/1.0 (personal newspaper; feed reader)" };
 
@@ -62,17 +61,8 @@ async function existential() {
   };
 }
 
-function calvin(dateIso) {
-  const [y, m, d] = dateIso.split("-");
-  return {
-    key: "calvin", strip: "Calvin and Hobbes", author: "Bill Watterson",
-    title: "Today's strip", images: [], caption: "Running daily on GoComics.",
-    link: `https://www.gocomics.com/calvinandhobbes/${y}/${m}/${d}`, linkOnly: true,
-  };
-}
-
-export async function fetchComics(dateIso) {
-  const jobs = [calvin(dateIso), xkcd(), existential(), smbc()];
+export async function fetchComics() {
+  const jobs = [xkcd(), smbc(), existential()];
   const out = [];
   for (const r of await Promise.allSettled(jobs)) {
     if (r.status === "fulfilled" && r.value) out.push(r.value);

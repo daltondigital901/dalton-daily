@@ -2,7 +2,7 @@
 import { READER_PROFILE } from "./sections.js";
 
 const API = "https://api.anthropic.com/v1/messages";
-const KINDS = ["primary", "wire", "legacy", "foreign", "investigative", "independent", "trade", "research"];
+const KINDS = ["primary", "wire", "legacy", "foreign", "investigative", "independent", "trade", "research", "magazine"];
 // Aggregators, syndication mirrors and SEO content farms: search around them so the original gets linked.
 const BLOCKED = [
   "yahoo.com", "msn.com", "newsbreak.com", "ground.news", "investing.com", "trefis.com", "marketchameleon.com",
@@ -105,6 +105,8 @@ export async function reportSection(env, section, ctx) {
     "    Meduza, South China Morning Post, Nikkei Asia, Caixin, The Hindu, Dawn, Africa Report, Folha, El País, Reuters and AFP wires.",
     "  * Investigative and specialist outlets: ProPublica, Bellingcat, ICIJ, OCCRP, The Intercept, Lawfare, Just Security, War on the Rocks, Semafor,",
     "    404 Media, Rest of World, The Information, and serious trade press.",
+    "  * Policy and ideas magazines: Foreign Policy, Foreign Affairs, The Economist, The Atlantic, The Diplomat, The National Interest,",
+    "    Responsible Statecraft, Defense One, Breaking Defense, The Record, Noema, and similar.",
     "  * Independent writers and newsletters (Substack and similar) with real expertise or original reporting.",
     "- Aim for a mix: across a section's stories, include at least one primary source and at least one non-U.S. or independent/investigative source when they exist.",
     "- Prefer the original over a rewrite: link the court filing, the study, the foreign outlet that broke it, not the aggregator.",
@@ -115,6 +117,7 @@ export async function reportSection(env, section, ctx) {
     "    wire = Reuters, AP, AFP, Bloomberg wire;  legacy = major U.S. national or local newspapers and networks",
     "    foreign = a news outlet based outside the U.S.;  investigative = outlets whose core work is investigations (ProPublica, Bellingcat, ICIJ, OCCRP...)",
     "    independent = a named writer's own newsletter or site (Substack, Ghost, personal blog) with real expertise",
+    "    magazine = policy, ideas and general-interest magazines (Foreign Policy, Foreign Affairs, The Economist, The Atlantic...)",
     "    trade = specialist industry press (Utility Dive, BleepingComputer, Law360, Variety...);  research = think tanks, NGOs, data/monitoring groups, law-firm client alerts",
     "- Return ONLY a JSON object wrapped in <json></json> tags. No other prose.",
   ].join("\n");
@@ -126,15 +129,17 @@ export async function reportSection(env, section, ctx) {
   const prompt = [
     `Beat: ${section.name}`,
     `Assignment: ${section.brief}`,
-    `File ${section.count} stories, ranked most important first.`,
+    section.optional
+      ? `File up to ${section.count} stories, ranked most important first. If there is no genuinely new development, return {"stories":[]} rather than padding.`
+      : `File ${section.count} stories, ranked most important first.`,
     recent.length
-      ? `Already published in the last 3 days (do NOT repeat these unless there is a genuine new development; if you do, set "update": true and lead with what is new):\n- ${recent.join("\n- ")}`
+      ? `Already published in the last ${section.lookback || 3} days (do NOT repeat these unless there is a genuine new development; if you do, set "update": true and lead with what is new):\n- ${recent.join("\n- ")}`
       : "",
     liked.length ? `The reader liked these past stories in this section (more like this):\n- ${liked.join("\n- ")}` : "",
     disliked.length ? `The reader disliked these past stories (less like this):\n- ${disliked.join("\n- ")}` : "",
     "",
     "JSON shape:",
-    `<json>{"stories":[{"headline":"Short newspaper headline, under 14 words","dek":"One-line subheadline","dateline":"CITY or blank","body":"Summary of 90-150 words in your own words: what happened, key numbers, who, and what comes next","why":"One sentence on why it matters","importance":1-10 (10 = front-page news anywhere),"update":false,"sources":[{"name":"Outlet or document name","url":"https://...","kind":"primary|wire|legacy|foreign|investigative|independent|trade|research"}]}]}</json>`,
+    `<json>{"stories":[{"headline":"Short newspaper headline, under 14 words","dek":"One-line subheadline","dateline":"CITY or blank","body":"Summary of 90-150 words in your own words: what happened, key numbers, who, and what comes next","why":"One sentence on why it matters","importance":1-10 (10 = front-page news anywhere),"update":false,"sources":[{"name":"Outlet or document name","url":"https://...","kind":"primary|wire|legacy|foreign|investigative|independent|trade|research|magazine"}]}]}</json>`,
   ]
     .filter(Boolean)
     .join("\n\n");

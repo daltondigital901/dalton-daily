@@ -5,6 +5,7 @@ import { SECTIONS } from "./sections.js";
 import { reportSection } from "./claude.js";
 import { fetchComics, fetchWeather } from "./comics.js";
 import { writeScripture, writeSlaaReading } from "./devotions.js";
+import { findImages } from "./images.js";
 
 const BATCH = 6; // sections reported in parallel
 
@@ -27,14 +28,20 @@ export class EditionWorkflow extends WorkflowEntrypoint {
 
     const ctx = await step.do("load context", async () => {
       const recentRows = await env.DB.prepare(
-        "SELECT section, headline FROM stories WHERE date >= date(?, '-3 days') AND date < ? ORDER BY date DESC"
+        "SELECT section, headline, date FROM stories WHERE date >= date(?, '-45 days') AND date < ? ORDER BY date DESC"
       ).bind(date, date).all();
+      const lookback = Object.fromEntries(SECTIONS.map((s) => [s.key, s.lookback || 3]));
+      const dayMs = 86400000, today = Date.parse(date + "T00:00:00Z");
       const voteRows = await env.DB.prepare(
         `SELECT f.section, f.vote, s.headline FROM feedback f JOIN stories s ON s.id = f.story_id
          WHERE f.created_at >= datetime('now', '-60 days') ORDER BY f.created_at DESC LIMIT 400`
       ).all();
       const recentHeadlines = {}, liked = {}, disliked = {};
-      for (const r of recentRows.results) (recentHeadlines[r.section] ||= []).push(r.headline);
+      for (const r of recentRows.results) {
+        if ((today - Date.parse(r.date + "T00:00:00Z")) / dayMs <= (lookback[r.section] || 3)) {
+          (recentHeadlines[r.section] ||= []).push(r.headline);
+        }
+      }
       for (const r of voteRows.results) {
         const bucket = r.vote > 0 ? liked : disliked;
         const list = (bucket[r.section] ||= []);
@@ -75,6 +82,10 @@ export class EditionWorkflow extends WorkflowEntrypoint {
       }
     }
 
+    const images = await step.do("images", { retries: { limit: 1, delay: "10 seconds" }, timeout: "6 minutes" }, () =>
+      findImages(sections)
+    ).catch(() => ({}));
+
     const retry = { retries: { limit: 2, delay: "20 seconds", backoff: "exponential" }, timeout: "5 minutes" };
     const [scripture, slaa] = await Promise.all([
       step.do("scripture", retry, () => writeScripture(env, ctx)).catch((e) => { errors.scripture = String(e?.message || e).slice(0, 400); return null; }),
@@ -82,7 +93,7 @@ export class EditionWorkflow extends WorkflowEntrypoint {
     ]);
 
     const extras = await step.do("comics and weather", async () => ({
-      comics: await fetchComics(date),
+      comics: await fetchComics(),
       weather: await fetchWeather(),
     }));
 
@@ -92,23 +103,36 @@ export class EditionWorkflow extends WorkflowEntrypoint {
         for (let i = 0; i < stories.length; i++) {
           stories[i].id = await storyId(date, key, i, stories[i].headline);
           stories[i].section = key;
+          const img = images[`${key}:${i}`];
+          if (img) stories[i].image = img;
           ids.push(stories[i]);
         }
       }
       // Front page: the most important stories, at most one per section.
+      // The lead should carry a picture: promote the best illustrated story if it is within a point of the top.
       const seen = new Set();
-      const front = ids
-        .slice()
-        .sort((a, b) => b.importance - a.importance)
-        .filter((s) => (seen.has(s.section) ? false : seen.add(s.section)))
-        .slice(0, 5)
+      const ranked = ids.slice().sort((a, b) => b.importance - a.importance);
+      const frontStories = ranked.filter((s) => (seen.has(s.section) ? false : seen.add(s.section))).slice(0, 5);
+      const illustrated = frontStories.find((s) => s.image);
+      if (illustrated && frontStories[0] !== illustrated && illustrated.importance >= frontStories[0].importance - 1) {
+        frontStories.splice(frontStories.indexOf(illustrated), 1);
+        frontStories.unshift(illustrated);
+      }
+      const front = frontStories.map((s) => s.id);
+      // "In Pictures": four more illustrated stories from different desks, not already on the front page.
+      const deskOf = Object.fromEntries(SECTIONS.map((s) => [s.key, s.desk]));
+      const usedDesks = new Set();
+      const pictures = ranked
+        .filter((s) => s.image && !front.includes(s.id))
+        .filter((s) => (usedDesks.has(deskOf[s.section]) ? false : usedDesks.add(deskOf[s.section])))
+        .slice(0, 4)
         .map((s) => s.id);
 
       const edition = {
         date, longDate: ctx.longDate, number: ctx.number,
         weather: extras.weather, comics: extras.comics,
         devotions: { scripture, slaa },
-        sections, front, errors, searches,
+        sections, front, pictures, errors, searches,
         generatedAt: new Date().toISOString(),
       };
 
@@ -129,7 +153,7 @@ export class EditionWorkflow extends WorkflowEntrypoint {
           "UPDATE runs SET finished_at = datetime('now'), status = ?, detail = ? WHERE id = (SELECT MAX(id) FROM runs WHERE date = ?)"
         ).bind(
           Object.keys(errors).length ? "partial" : "ok",
-          JSON.stringify({ stories: ids.length, searches, errors }),
+          JSON.stringify({ stories: ids.length, images: ids.filter((s) => s.image).length, searches, errors }),
           date
         ),
       ];
