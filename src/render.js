@@ -118,8 +118,13 @@ figure.ph figcaption{font-family:"Libre Franklin",Arial,sans-serif;font-size:10.
 .missing{font-style:italic;color:var(--muted)}
 
 /* Comics */
-.comics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-areas:"xkcd smbc" "pdl smbc" "existential existential";gap:24px 30px;margin-top:18px;align-items:start}
-.strip.k-xkcd{grid-area:xkcd}.strip.k-smbc{grid-area:smbc}.strip.k-pdl{grid-area:pdl}.strip.k-existential{grid-area:existential}
+/* One strip per row, each centered at a width that suits its format and reads comfortably. */
+.comics{display:flex;flex-direction:column;align-items:center;gap:34px;margin-top:18px}
+.strip{width:100%;text-align:center}
+.strip .cap,.strip .ttl{max-width:640px;margin-left:auto;margin-right:auto}
+.strip img{width:100%;height:auto}
+.strip.k-xkcd{max-width:820px}.strip.k-pdl{max-width:720px}.strip.k-smbc{max-width:820px}.strip.k-existential{max-width:1000px}
+.strip.k-xkcd{order:1}.strip.k-pdl{order:2}.strip.k-smbc{order:3}.strip.k-existential{order:4}
 .strip{border-top:2px solid var(--rule);padding-top:10px}
 .strip.wide{grid-column:1/-1}
 .strip .name{font-family:"Playfair Display",Georgia,serif;font-weight:900;font-size:22px;margin:0}
@@ -222,6 +227,23 @@ blockquote.stoic p{margin:0 0 8px;text-align:left}
  .strip img{margin-left:-14px;margin-right:-14px;max-width:calc(100% + 28px)}
 }
 
+/* Market ticker */
+:root{--up:#1d7a3e;--down:#a3281b}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--up:#5fc583;--down:#ec7a68}}
+:root[data-theme="dark"]{--up:#5fc583;--down:#ec7a68}
+.ticker{overflow:hidden;white-space:nowrap;border-bottom:1px solid var(--rule);font-family:"Libre Franklin",Arial,sans-serif;font-size:12px;letter-spacing:.03em;-webkit-mask-image:linear-gradient(90deg,transparent,#000 4%,#000 96%,transparent);mask-image:linear-gradient(90deg,transparent,#000 4%,#000 96%,transparent)}
+.ticker .track{display:inline-flex;padding:7px 0;will-change:transform}
+.ticker .track.run{animation:tick var(--dur,90s) linear infinite}
+.ticker:hover .track.run{animation-play-state:paused}
+.tq{display:inline-flex;gap:6px;align-items:baseline;padding:0 18px;border-right:1px solid var(--hair)}
+.tq b{font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-size:10.5px}
+.tq .px{font-variant-numeric:tabular-nums}
+.tq .up{color:var(--up)}.tq .dn{color:var(--down)}
+.tq.crypto b::before{content:"\\25C6 ";color:var(--accent);font-size:8px;vertical-align:1px}
+.tq.loading{color:var(--muted);border:0}
+@keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media (max-width:700px){.ticker{margin:0 -14px;font-size:12.5px}}
+
 footer{margin-top:48px;border-top:4px double var(--rule);padding-top:10px;font-family:"Libre Franklin",Arial,sans-serif;font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:8px 18px;justify-content:space-between}
 .notice{background:var(--card);border:1px solid var(--hair);padding:10px 14px;margin-top:14px;font-size:15px}
 .archive{list-style:none;padding:0;column-count:3;column-gap:30px}
@@ -239,7 +261,7 @@ footer{margin-top:48px;border-top:4px double var(--rule);padding-top:10px;font-f
  .front{grid-template-columns:1fr}.lead{padding-right:0;border-right:0;border-bottom:1px solid var(--hair);padding-bottom:16px}.side{padding-left:0;padding-top:16px}
  .c3{grid-column:span 6}.feat.c6.split{display:block}
  .reflect{grid-template-columns:1fr}.reflect>div+div{border-left:0;border-top:1px solid var(--hair)}
- .comics{grid-template-columns:1fr;grid-template-areas:"xkcd" "pdl" "smbc" "existential"}.archive{column-count:1}
+ .comics{gap:26px}.archive{column-count:1}
  .dateline{justify-content:center}.feat h4{font-size:27px}
 }
 `;
@@ -252,6 +274,32 @@ const SCRIPT = `
 <script>
 (function(){
   var on=document.querySelector('nav.index a.on');if(on&&on.scrollIntoView){try{on.parentNode.scrollLeft=on.offsetLeft-(on.parentNode.clientWidth-on.offsetWidth)/2}catch(e){}}
+
+  // Market ticker: load quotes, then loop them forever (the list is doubled so the wrap is seamless).
+  (function(){
+    var tk=document.getElementById('tk');if(!tk)return;
+    function fmt(q){
+      var p=q.price,d;
+      if(q.kind==='yield')return p.toFixed(3)+'%';
+      if(q.kind==='fx')return p.toFixed(p<10?4:2);
+      if(q.kind==='crypto'){d=p>=1000?0:p>=1?2:4;return '$'+p.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d})}
+      return p.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+    }
+    function item(q){
+      var up=q.change>=0,cls=Math.abs(q.change)<0.005?'':(up?'up':'dn');
+      return '<span class="tq '+(q.kind==='crypto'?'crypto':'')+'"><b>'+q.name+'</b><span class="px">'+fmt(q)+'</span><span class="'+cls+'">'+(up?'▲':'▼')+' '+Math.abs(q.change).toFixed(2)+'%</span></span>';
+    }
+    function load(){
+      fetch('/api/ticker').then(function(r){return r.json()}).then(function(j){
+        if(!j.quotes||!j.quotes.length)return;
+        var html=j.quotes.map(item).join('');
+        tk.innerHTML=html+html;
+        var w=tk.scrollWidth/2;tk.style.setProperty('--dur',Math.max(40,w/45)+'s');
+        tk.classList.add('run');
+      }).catch(function(){});
+    }
+    load();setInterval(load,300000);
+  })();
   var store={};try{store=JSON.parse(localStorage.getItem('dd_votes')||'{}')}catch(e){}
   document.querySelectorAll('.vote').forEach(function(v){
     var id=v.dataset.id;
@@ -266,7 +314,8 @@ const SCRIPT = `
   });
   // A photo that fails to load (or is a 1px tracker) disappears instead of leaving a hole.
   function check(img){if(img.naturalWidth&&img.naturalWidth<80){drop(img)}}
-  function drop(img){var f=img.closest('figure');if(f)f.remove()}
+  // If the publisher's photo will not load, swap in the encyclopedia photo before giving up.
+  function drop(img){var fb=img.getAttribute('data-fallback');if(fb){img.removeAttribute('data-fallback');var c=img.closest('figure').querySelector('figcaption');if(c)c.textContent=img.getAttribute('data-fallback-credit')||'';img.src=fb;return}var f=img.closest('figure');if(f)f.remove()}
   document.querySelectorAll('figure.ph img').forEach(function(img){
     img.addEventListener('error',function(){drop(img)});
     img.addEventListener('load',function(){check(img)});
@@ -297,8 +346,8 @@ function masthead(ed, base = "", active = "") {
 <header>
   <div class="mast">
     <div class="ear">${weather}</div>
-    <div><h1 class="title"><a href="${base || "/"}">Dalton Daily</a></h1><div class="motto">All the news fit for one reader</div></div>
-    <div class="ear right"><b>Vol. I &middot; No. ${ed?.number || 1}</b>Private edition<br>Printed for the publisher</div>
+    <div><h1 class="title"><a href="${base || "/"}">Dalton Daily</a></h1><div class="motto">Sourced widely. Told plainly.</div></div>
+    <div class="ear right"><b>Vol. I &middot; No. ${ed?.number || 1}</b>Morning edition<br>daltondaily.com</div>
   </div>
   <div class="dateline"><span>${esc(ed?.longDate || "")}</span><span>Memphis${w ? `<span class="mobile-weather"> &middot; ${w.high}°/${w.low}°</span>` : ""}<span class="desktop-only">, Tennessee</span></span><span>Est. 2026</span></div>
 </header>
@@ -309,7 +358,8 @@ function masthead(ed, base = "", active = "") {
     ${DESKS.map((d) => link(`${base}/${d.slug}`, d.short || d.name, d.slug)).join("")}
     <i class="sep" aria-hidden="true"></i>
     ${link(`${base}/comics`, "Comics", "comics")}
-  </nav>`;
+  </nav>
+  <div class="ticker" aria-label="Markets" role="marquee"><div class="track" id="tk"><span class="tq loading">Markets &middot; loading</span></div></div>`;
 }
 
 function paragraphs(body = "", dateline) {
@@ -323,7 +373,8 @@ function paragraphs(body = "", dateline) {
 
 function photo(s, cls = "") {
   if (!s.image?.src) return "";
-  return `<figure class="ph ${cls}"><div class="frame"><img src="${esc(s.image.src)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"></div><figcaption>${esc(s.image.credit || "")}</figcaption></figure>`;
+  const fb = s.image.fallback ? ` data-fallback="${esc(s.image.fallback)}" data-fallback-credit="${esc(s.image.fallbackCredit || "")}"` : "";
+  return `<figure class="ph ${cls}"><div class="frame"><img src="${esc(s.image.src)}" alt=""${fb} loading="lazy" decoding="async" referrerpolicy="no-referrer"></div><figcaption>${esc(s.image.credit || "")}</figcaption></figure>`;
 }
 
 function sourcesLine(s) {
@@ -414,8 +465,8 @@ function inPictures(ed, base) {
 
 function reflections(ed) {
   const sc = ed.devotions?.scripture;
-  const sl = ed.devotions?.slaa;
-  if (!sc && !sl && !ed.devotions?.stoic) return `<p class="missing">The reflections were not filed this morning.</p>`;
+  const cp = ed.devotions?.commonplace;
+  if (!sc && !cp && !ed.devotions?.stoic) return `<p class="missing">The reflections were not filed this morning.</p>`;
   const scripture = sc
     ? `<div><div class="kicker">Daily Scripture</div>
       <h3>${esc(sc.theme || sc.reference)}</h3>
@@ -423,14 +474,15 @@ function reflections(ed) {
       ${sc.verses.length ? `<p class="verse">${sc.verses.map((v) => `<sup>${v.n}</sup>${esc(v.text)}`).join(" ")}</p>` : ""}
       <div class="body">${paragraphs(sc.reflection)}</div></div>`
     : `<div><div class="kicker">Daily Scripture</div><p class="missing">Not available this morning.</p></div>`;
-  const slaa = sl
-    ? `<div><div class="kicker">Daily SLAA Reading</div>
-      <h3>${esc(sl.title)}</h3>
-      <div class="ref">From <a href="${esc(sl.url)}" target="_blank" rel="noopener">${esc(sl.source)}</a></div>
-      <div class="body">${paragraphs(sl.reading)}</div>
-      ${sl.practice ? `<p class="note"><b>Today</b>${esc(sl.practice)}</p>` : ""}
-      ${sl.question ? `<p class="note"><b>Reflect</b>${esc(sl.question)}</p>` : ""}</div>`
-    : `<div><div class="kicker">Daily SLAA Reading</div><p class="missing">Not available this morning.</p></div>`;
+  const commonplace = cp
+    ? `<div><div class="kicker">The Commonplace Book &middot; ${esc(cp.field)}</div>
+      <h3>${esc(cp.title)}</h3>
+      ${cp.dek ? `<p class="dek">${esc(cp.dek)}</p>` : ""}
+      <div class="body">${paragraphs(cp.essay)}</div>
+      ${cp.takeaway ? `<p class="note"><b>Remember</b>${esc(cp.takeaway)}</p>` : ""}
+      ${cp.further ? `<p class="note"><b>Read next</b>${esc(cp.further)}</p>` : ""}
+      ${cp.url ? `<p class="tr">Source: <a href="${esc(cp.url)}" target="_blank" rel="noopener">${esc(cp.source || new URL(cp.url).hostname)}</a></p>` : ""}</div>`
+    : `<div><div class="kicker">The Commonplace Book</div><p class="missing">Not available this morning.</p></div>`;
   const st = ed.devotions?.stoic;
   const stoic = st
     ? `<div><div class="kicker">Daily Stoic${st.obscure ? " &middot; From the Margins" : ""}</div>
@@ -442,15 +494,15 @@ function reflections(ed) {
       <div class="body">${paragraphs(st.reflection)}</div>
       ${st.practice ? `<p class="note"><b>Practice</b>${esc(st.practice)}</p>` : ""}</div>`
     : `<div><div class="kicker">Daily Stoic</div><p class="missing">Not available this morning.</p></div>`;
-  return `<section class="reflect three" id="reflections">${scripture}${stoic}${slaa}</section>`;
+  return `<section class="reflect three" id="reflections">${scripture}${stoic}${commonplace}</section>`;
 }
 
 // Home-page version of the reflections: the verse and the reading's title, linking to the full page.
 function reflectionsTeaser(ed, base) {
   const sc = ed.devotions?.scripture;
-  const sl = ed.devotions?.slaa;
+  const cp = ed.devotions?.commonplace;
   const st = ed.devotions?.stoic;
-  if (!sc && !sl && !st) return "";
+  if (!sc && !cp && !st) return "";
   const firstPara = (t = "") => t.split(/\n{2,}|\n/)[0] || "";
   return `<section class="reflect three teaser">
     <div><div class="kicker">Daily Scripture</div>${sc ? `<h3><a href="${base}/reflections">${esc(sc.theme || sc.reference)}</a></h3>
@@ -459,9 +511,9 @@ function reflectionsTeaser(ed, base) {
     <div><div class="kicker">Daily Stoic</div>${st ? `<h3><a href="${base}/reflections">${esc(st.author)}</a></h3>
       <div class="ref">${esc(st.work)}, ${esc(st.citation)}</div>
       <p class="clip verse">${esc(firstPara(st.passage))}</p><a class="more" href="${base}/reflections">Continue reading &rarr;</a>` : `<p class="missing">Not available.</p>`}</div>
-    <div><div class="kicker">Daily SLAA Reading</div>${sl ? `<h3><a href="${base}/reflections">${esc(sl.title)}</a></h3>
-      <div class="ref">From ${esc(sl.source)}</div>
-      <p class="clip">${esc(firstPara(sl.reading))}</p><a class="more" href="${base}/reflections">Continue reading &rarr;</a>` : `<p class="missing">Not available.</p>`}</div>
+    <div><div class="kicker">The Commonplace Book${cp ? ` &middot; ${esc(cp.field)}` : ""}</div>${cp ? `<h3><a href="${base}/reflections">${esc(cp.title)}</a></h3>
+      ${cp.dek ? `<div class="ref">${esc(cp.dek)}</div>` : ""}
+      <p class="clip">${esc(firstPara(cp.essay))}</p><a class="more" href="${base}/reflections">Continue reading &rarr;</a>` : `<p class="missing">Not available.</p>`}</div>
   </section>`;
 }
 

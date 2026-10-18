@@ -101,6 +101,7 @@ function cleanStory(s) {
     dateline: scrub(s.dateline),
     importance: Math.max(1, Math.min(10, Number(s.importance) || 5)),
     update: Boolean(s.update),
+    imageQuery: scrub(s.image_query).slice(0, 80),
     sources,
   };
 }
@@ -108,7 +109,7 @@ function cleanStory(s) {
 export async function reportSection(env, section, ctx) {
   const today = ctx.longDate;
   const system = [
-    `You are a staff reporter for Dalton Daily, a private one-reader morning newspaper. Today is ${today}.`,
+    `You are a staff reporter for Dalton Daily, a morning newspaper published in Memphis. Today is ${today}.`,
     READER_PROFILE,
     "House rules:",
     "- Report only what your searches confirm. Never invent facts, figures, quotes, or sources.",
@@ -160,7 +161,7 @@ export async function reportSection(env, section, ctx) {
     disliked.length ? `The reader disliked these past stories (less like this):\n- ${disliked.join("\n- ")}` : "",
     "",
     "JSON shape:",
-    `<json>{"stories":[{"headline":"Short newspaper headline, under 14 words","dek":"One-line subheadline","dateline":"CITY or blank","body":"Summary of 90-150 words in your own words: what happened, key numbers, who, and what comes next","why":"One sentence on why it matters","importance":1-10 (10 = front-page news anywhere),"update":false,"sources":[{"name":"Outlet or document name","url":"https://...","kind":"primary|wire|legacy|foreign|investigative|independent|trade|research|magazine"}]}]}</json>`,
+    `<json>{"stories":[{"headline":"Short newspaper headline, under 14 words","dek":"One-line subheadline","dateline":"CITY or blank","body":"Summary of 90-150 words in your own words: what happened, key numbers, who, and what comes next","why":"One sentence on why it matters","importance":1-10 (10 = front-page news anywhere),"update":false,"image_query":"2-5 words naming the photographable subject for an encyclopedia photo search (a person, place, building, object or event), e.g. Strait of Hormuz, Jerome Powell, Cannon Center Memphis","sources":[{"name":"Outlet or document name","url":"https://...","kind":"primary|wire|legacy|foreign|investigative|independent|trade|research|magazine"}]}]}</json>`,
   ]
     .filter(Boolean)
     .join("\n\n");

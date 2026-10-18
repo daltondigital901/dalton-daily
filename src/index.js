@@ -1,6 +1,7 @@
 import { renderEdition, renderArchive, renderMessage, PAGES } from "./render.js";
 import { SECTIONS } from "./sections.js";
 import { ICONS } from "./icons.js";
+import { ticker } from "./ticker.js";
 
 function b64(b) {
   const bin = atob(b);
@@ -47,10 +48,16 @@ async function latestEdition(env, date) {
 }
 
 export default {
-  async fetch(req, env) {
+  async fetch(req, env, ctx) {
     const url = new URL(req.url);
+    // daltondaily.com -> www.daltondaily.com
+    if (url.hostname === "daltondaily.com") {
+      url.hostname = "www.daltondaily.com";
+      return Response.redirect(url.toString(), 301);
+    }
     const { date: today } = localParts(env.TIMEZONE || "America/Chicago");
 
+    if (url.pathname === "/api/ticker") return ticker(ctx);
     if (url.pathname === "/robots.txt") return new Response("User-agent: *\nDisallow: /\n");
     if (ICON_ROUTES[url.pathname]) {
       const [key, type] = ICON_ROUTES[url.pathname];

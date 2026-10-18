@@ -66,23 +66,69 @@ async function pool(items, limit, fn) {
   return out;
 }
 
-// sections: { key: [story...] } -> { "key:index": { src, credit } }
-export async function findImages(sections) {
+const WIKI_UA = { "user-agent": "DaltonDaily/1.0 (https://www.daltondaily.com; personal newspaper)" };
+
+// Wikipedia lead image for the best-matching article, then Wikimedia Commons, as a fallback photo.
+async function wikiImages(query) {
+  if (!query) return [];
+  const out = [];
+  try {
+    const u = `https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrsearch=${encodeURIComponent(query)}&gsrlimit=4&prop=pageimages&piprop=thumbnail&pithumbsize=1280`;
+    const j = await (await fetch(u, { headers: WIKI_UA })).json();
+    const pages = Object.values(j.query?.pages || {}).sort((a, b) => a.index - b.index);
+    for (const p of pages) {
+      const src = p.thumbnail?.source;
+      if (src && p.thumbnail.width >= 400 && !/(flag|logo|seal|coat_of_arms|map|icon|signature)/i.test(src)) out.push({ src, credit: "Wikipedia" });
+    }
+  } catch {}
+  try {
+    const u = `https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrnamespace=6&gsrsearch=${encodeURIComponent(query + " filetype:bitmap")}&gsrlimit=6&prop=imageinfo&iiprop=url|size&iiurlwidth=1280`;
+    const j = await (await fetch(u, { headers: WIKI_UA })).json();
+    const pages = Object.values(j.query?.pages || {}).sort((a, b) => a.index - b.index);
+    for (const p of pages) {
+      const ii = p.imageinfo?.[0];
+      if (ii?.thumburl && ii.width >= 600 && !/(logo|flag|map|seal|icon|diagram|chart|signature)/i.test(p.title)) out.push({ src: ii.thumburl, credit: "Wikimedia Commons" });
+    }
+  } catch {}
+  return out;
+}
+
+// sections: { key: [story...] }, defaults: { key: "fallback query" } -> { "key:index": { src, credit, fallback? } }
+// Every story gets a picture: the publisher's own share image when there is one, otherwise (and as a
+// backup if that image will not load) a Wikipedia or Wikimedia Commons photo of the story's subject.
+export async function findImages(sections, defaults = {}) {
   const jobs = [];
   for (const [key, stories] of Object.entries(sections)) {
-    stories.forEach((s, i) => jobs.push({ slot: `${key}:${i}`, sources: (s.sources || []).slice(0, 3) }));
+    stories.forEach((s, i) => jobs.push({ key, slot: `${key}:${i}`, sources: (s.sources || []).slice(0, 4), query: s.imageQuery || "" }));
   }
-  const found = await pool(jobs, 10, async (job) => {
+  const og = await pool(jobs, 10, async (job) => {
     for (const src of job.sources) {
       const img = await imageFor(src.url);
-      if (img) return { slot: job.slot, src: img, credit: src.name };
+      if (img) return { src: img, credit: src.name };
     }
     return null;
   });
-  // The same image on two different stories is a site-wide default, not a story photo.
   const counts = {};
-  for (const f of found) if (f) counts[f.src] = (counts[f.src] || 0) + 1;
+  for (const f of og) if (f) counts[f.src] = (counts[f.src] || 0) + 1;
+
+  const wiki = await pool(jobs, 8, async (job) => {
+    let list = await wikiImages(job.query);
+    if (!list.length && defaults[job.key]) list = await wikiImages(defaults[job.key]);
+    return list;
+  });
+
+  const used = new Set();
   const map = {};
-  for (const f of found) if (f && counts[f.src] === 1) map[f.slot] = { src: f.src, credit: f.credit };
+  jobs.forEach((job, n) => {
+    const own = og[n] && counts[og[n].src] === 1 ? og[n] : null;
+    const alt = (wiki[n] || []).find((w) => !used.has(w.src)) || (wiki[n] || [])[0] || null;
+    if (own) {
+      used.add(own.src);
+      map[job.slot] = alt ? { ...own, fallback: alt.src, fallbackCredit: alt.credit } : own;
+    } else if (alt) {
+      used.add(alt.src);
+      map[job.slot] = alt;
+    }
+  });
   return map;
 }

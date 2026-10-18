@@ -1,38 +1,18 @@
-// Morning Reflections: a daily scripture and a daily SLAA reading.
+// Morning Reflections: a daily scripture, a daily Stoic reading, and the Commonplace Book.
 //
 // Scripture: Claude picks the passage and writes a short reflection; the verse text itself comes
 // verbatim from bible-api.com (World English Bible, public domain) so it is never misquoted.
 //
-// SLAA: Claude searches only slaafws.org (the Augustine Fellowship's own site and store) and writes
-// a reading in its own words, citing and linking the SLAA document it draws on. SLAA literature is
-// copyrighted, so the reading paraphrases and links rather than reprinting.
+// Commonplace Book: a short, checked essay on one idea, event or figure, rotating through philosophy,
+// theology, metaphysics, history, science, literature and entrepreneurship.
 import { callClaude, extractJson, scrub } from "./claude.js";
 
 const TRANSLATION = "web";
 
-// Most days focus on limerence and romantic obsession; the rest rotate through other recovery themes.
-const SLAA_ROTATION = [
-  "the Twelve Steps as SLAA works them",
-  "the Twelve Traditions and fellowship",
-  "bottom lines, top lines and boundaries",
-  "sponsorship, service and outreach calls",
-  "withdrawal and the first weeks of sobriety",
-  "anorexia (sexual, social and emotional) as SLAA describes it",
-  "the Signs of Recovery",
-  "healthy intimacy and dating in recovery",
-];
-
-export function slaaFocus(dateIso) {
-  const [y, m, d] = dateIso.split("-").map(Number);
-  const day = Math.floor((Date.UTC(y, m - 1, d) - Date.UTC(y, 0, 0)) / 86400000);
-  if (day % 10 < 7) return { limerence: true, theme: "limerence, romantic obsession, fantasy and intrigue, and recovery from them" };
-  return { limerence: false, theme: SLAA_ROTATION[day % SLAA_ROTATION.length] };
-}
-
 export async function writeScripture(env, ctx) {
   const recent = ctx.recentScripture || [];
   const system =
-    `You choose the daily scripture for a private morning newspaper. Today is ${ctx.longDate}. ` +
+    `You choose the daily scripture for Dalton Daily, a morning newspaper. Today is ${ctx.longDate}. ` +
     "Return ONLY JSON wrapped in <json></json>.";
   const prompt = [
     "Pick one passage of 3 to 10 consecutive verses from the Bible (Old or New Testament) for today's reading.",
@@ -62,51 +42,6 @@ export async function writeScripture(env, ctx) {
     verses,
     translation: "World English Bible",
     link: `https://www.biblegateway.com/passage/?search=${encodeURIComponent(reference)}&version=WEB`,
-  };
-}
-
-export async function writeSlaaReading(env, ctx, dateIso) {
-  const focus = slaaFocus(dateIso);
-  const recent = ctx.recentSlaa || [];
-  const system = [
-    `You write the daily recovery reading for a private morning newspaper. Today is ${ctx.longDate}.`,
-    "The reader is a member of Sex and Love Addicts Anonymous (SLAA). Write with warmth and plain honesty, the way a",
-    "thoughtful sponsor would talk: no clinical lecturing, no shaming, no grandiosity.",
-    "Rules:",
-    "- Draw ONLY on SLAA's own literature and documents found by searching slaafws.org.",
-    "- SLAA literature is copyrighted. Write the reading entirely in your own words. Never reproduce sentences or",
-    "  passages. At most one short quoted phrase under 12 words, clearly attributed.",
-    "- Name the specific SLAA document you drew on and give its URL from your search results.",
-    "- Do not give medical or clinical advice. Do not diagnose.",
-    "- Plain text only inside the JSON: no citation markup, no <cite> tags, no HTML. Never refer to yourself or your searches.",
-    "- Return ONLY JSON wrapped in <json></json>.",
-  ].join("\n");
-  const prompt = [
-    `Today's focus: ${focus.theme}.`,
-    focus.limerence
-      ? "Ground it in what SLAA's literature says about romantic obsession and limerence: fantasy, intrigue, withdrawal from an obsession, and what recovery looks like day to day."
-      : "Ground it in what SLAA's literature says about this theme.",
-    recent.length ? `Recent readings (choose a different angle or document):\n- ${recent.join("\n- ")}` : "",
-    'JSON shape: <json>{"title":"Short title for today\'s reading","source":"Name of the SLAA document","url":"https://...slaafws.org/...","reading":"150-220 words in your own words, in two or three short paragraphs separated by a blank line","practice":"One concrete, small thing to practice today","question":"One question for journaling or for a sponsor"}</json>',
-  ].filter(Boolean).join("\n\n");
-
-  const { text, citedUrls } = await callClaude(env, {
-    system,
-    prompt,
-    maxTokens: 3000,
-    tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 4, allowed_domains: ["slaafws.org"] }],
-  });
-  const r = extractJson(text);
-  let url = typeof r.url === "string" && /^https?:\/\/([a-z0-9-]+\.)*slaafws\.org/i.test(r.url) ? r.url : "";
-  if (!url) url = [...citedUrls.keys()].find((u) => /slaafws\.org/i.test(u)) || "https://slaafws.org/";
-  return {
-    title: scrub(r.title || "Today's reading"),
-    source: scrub(r.source || "SLAA literature"),
-    url,
-    reading: scrub(r.reading || ""),
-    practice: scrub(r.practice || ""),
-    question: scrub(r.question || ""),
-    limerence: focus.limerence,
   };
 }
 
@@ -147,7 +82,7 @@ export async function writeStoic(env, ctx, dateIso) {
   const focus = stoicFocus(dateIso);
   const recent = ctx.recentStoic || [];
   const system = [
-    `You choose and introduce the daily Stoic reading for a private morning newspaper. Today is ${ctx.longDate}.`,
+    `You choose and introduce the daily Stoic reading for Dalton Daily, a morning newspaper. Today is ${ctx.longDate}.`,
     "Rules:",
     "- The passage must be real and exactly cited (author, work, book and section or fragment number). Verify it with your searches before using it. Never invent or blend passages.",
     "- Quote the English only from a public-domain translation published before 1929 (for example George Long, Hastings Crossley, W. A. Oldfather, Richard M. Gummere, John W. Basore, Walter Miller, C. D. Yonge, R. D. Hicks, A. C. Pearson, G. H. Rendall, C. R. Haines) and name the translator and year.",
@@ -186,5 +121,64 @@ export async function writeStoic(env, ctx, dateIso) {
     reflection: scrub(r.reflection || ""),
     practice: scrub(r.practice || ""),
     obscure: focus.obscure,
+  };
+}
+
+
+// The Commonplace Book: one well-chosen idea a day, explained clearly and checked against good sources.
+const COMMONPLACE = [
+  { field: "Philosophy", hint: "an argument, thought experiment, school or thinker (ancient to modern, any tradition)" },
+  { field: "Theology", hint: "a doctrine, council, controversy, mystic or theologian, treated historically and even-handedly" },
+  { field: "Metaphysics", hint: "a problem such as identity, causation, time, universals, free will or the mind-body problem, and the main answers given" },
+  { field: "History", hint: "a specific event, decision, document or turning point, with dates, people and consequences" },
+  { field: "Science", hint: "a discovery, experiment, law or open question, with how it was found and what it explains" },
+  { field: "Literature", hint: "a work, author, form or movement, with why it lasted and a passage-level sense of its style" },
+  { field: "Entrepreneurship", hint: "a founder's decision, business model, case study or principle from business history, with numbers where known" },
+];
+
+export function commonplaceFocus(dateIso) {
+  const [y, m, d] = dateIso.split("-").map(Number);
+  const day = Math.floor(Date.UTC(y, m - 1, d) / 86400000);
+  return COMMONPLACE[day % COMMONPLACE.length];
+}
+
+export async function writeCommonplace(env, ctx, dateIso) {
+  const focus = commonplaceFocus(dateIso);
+  const recent = ctx.recentCommonplace || [];
+  const system = [
+    `You write "The Commonplace Book", a daily short essay in Dalton Daily, a morning newspaper. Today is ${ctx.longDate}.`,
+    "Pick one specific, genuinely interesting subject a curious, well-read adult may not know well, and explain it so it sticks.",
+    "Rules:",
+    "- Be accurate. Check names, dates and claims with your searches and prefer encyclopedias, primary texts and scholarly sources.",
+    "- Write entirely in your own words. No quotations longer than a short phrase, except public-domain texts.",
+    "- Concrete over abstract: a scene, a number, a person, a consequence. No filler, no moralizing.",
+    "- Plain text only inside the JSON: no citation markup, no <cite> tags, no HTML. Never refer to yourself or your searches.",
+    "- Return ONLY JSON wrapped in <json></json>.",
+  ].join("\n");
+  const prompt = [
+    `Today's field: ${focus.field} — ${focus.hint}.`,
+    recent.length ? `Do NOT repeat any of these recent subjects:\n- ${recent.join("\n- ")}` : "",
+    'JSON shape: <json>{"field":"' + focus.field + '","title":"A short, specific title","dek":"One line on why it is worth knowing","essay":"220-320 words in three or four short paragraphs separated by a blank line","takeaway":"One sentence to remember","further":"A good next read: author and title","source":"Name of the main source","url":"https://..."}</json>',
+  ].filter(Boolean).join("\n\n");
+  const { text, citedUrls } = await callClaude(env, {
+    system,
+    prompt,
+    maxTokens: 3000,
+    tools: [{
+      type: "web_search_20250305", name: "web_search", max_uses: 4,
+      allowed_domains: ["plato.stanford.edu", "iep.utm.edu", "britannica.com", "en.wikipedia.org", "newadvent.org", "ccel.org", "perseus.tufts.edu", "gutenberg.org", "nature.com", "science.org", "nasa.gov", "si.edu", "loc.gov", "archives.gov", "history.state.gov", "hbs.edu", "hbr.org", "nobelprize.org", "royalsociety.org", "bl.uk", "metmuseum.org", "poetryfoundation.org", "jstor.org"],
+    }],
+  });
+  const r = extractJson(text);
+  let url = /^https:\/\//.test(r.url || "") ? r.url : [...citedUrls.keys()][0] || "";
+  return {
+    field: scrub(r.field || focus.field),
+    title: scrub(r.title || ""),
+    dek: scrub(r.dek || ""),
+    essay: scrub(r.essay || ""),
+    takeaway: scrub(r.takeaway || ""),
+    further: scrub(r.further || ""),
+    source: scrub(r.source || ""),
+    url,
   };
 }
