@@ -327,7 +327,7 @@ const SCRIPT = `
 
 export const SITE = "https://www.daltondaily.com";
 const SITE_DESC =
-  "Dalton Daily is a morning newspaper from Memphis: world affairs, national security, business and markets, technology, AI, science, law, Memphis politics and events, ideas, arts and travel — sourced from primary documents, the foreign press and independent reporting.";
+  "A morning newspaper from Memphis covering the world, business, technology, law, culture and ideas. Sourced widely. Told plainly.";
 const clip = (t = "", n = 158) => {
   const x = stripTags(t).replace(/\s+/g, " ").trim();
   return x.length <= n ? x : x.slice(0, x.lastIndexOf(" ", n - 1)).replace(/[,;:\s]+$/, "") + "…";
@@ -351,7 +351,7 @@ function headTags(title, meta = {}) {
     `<meta property="og:url" content="${esc(url)}">`,
     `<meta property="og:image" content="${esc(img)}">`,
     ...(meta.image ? [] : [`<meta property="og:image:width" content="1200">`, `<meta property="og:image:height" content="630">`, `<meta property="og:image:type" content="image/jpeg">`]),
-    `<meta property="og:image:alt" content="${esc(meta.imageAlt || "Dalton Daily — Sourced widely. Told plainly.")}">`,
+    `<meta property="og:image:alt" content="Dalton Daily — Sourced widely. Told plainly.">`,
     `<meta name="twitter:card" content="summary_large_image">`,
     `<meta name="twitter:title" content="${esc(meta.ogTitle || title)}">`,
     `<meta name="twitter:description" content="${esc(desc)}">`,
@@ -639,22 +639,23 @@ export function renderEdition(ed, { notice, page = "home", base = "" } = {}) {
   const all = Object.values(ed.sections || {}).flat();
   const byId = Object.fromEntries(all.map((x) => [x.id, x]));
   const lead = byId[(ed.front || [])[0]];
-  let description, image, imageAlt, ogTitle;
-  if (page === "home") {
-    const tops = (ed.front || []).map((id) => byId[id]).filter(Boolean).map((x) => x.headline);
-    description = tops.length
-      ? `A morning newspaper from Memphis, sourced from primary documents, the foreign press and independent reporting. Today: ${tops.slice(0, 2).join("; ")}.`
-      : SITE_DESC;
-    ogTitle = lead ? `Dalton Daily — ${lead.headline}` : "Dalton Daily";
-  } else if (desk) {
-    const ds = SECTIONS.filter((x) => x.desk === desk.key).flatMap((x) => ed.sections[x.key] || []).sort((a, b) => b.importance - a.importance);
-    description = ds.length ? `${desk.name}, ${ed.longDate}: ${ds.slice(0, 3).map((x) => x.headline).join("; ")}.` : `${desk.name} from Dalton Daily.`;
-  } else if (page === "reflections") {
-    const d = ed.devotions || {};
-    description = [d.scripture && `Scripture: ${d.scripture.reference}`, d.stoic && `Stoic: ${d.stoic.author}, ${d.stoic.work}`, d.commonplace && `The Commonplace Book: ${d.commonplace.title}`].filter(Boolean).join(" · ") || "Daily scripture, Stoic philosophy and the Commonplace Book.";
-  } else {
-    description = `Today's funnies: ${(ed.comics || []).map((c) => c.strip).join(", ")}.`;
-  }
+  // Share text stays the same every day: what the paper (or the section) is, not today's headlines.
+  const DESK_BLURB = {
+    world: "Geopolitics, national security, intelligence and the Epstein files.",
+    business: "Business, markets, finance, energy and search.",
+    technology: "Technology, artificial intelligence, science and space.",
+    law: "Courts, cases and the legal profession.",
+    memphis: "Memphis and Shelby County politics, and what's on this week.",
+    ideas: "Religion and philosophy.",
+    culture: "Arts, books, film, and music with a focus on piano and classical.",
+    sports: "Jiu-jitsu and judo.",
+    travel: "Travel news, dive destinations and places off the beaten path.",
+  };
+  let description;
+  if (page === "home") description = SITE_DESC;
+  else if (desk) description = `${desk.name} from Dalton Daily. ${DESK_BLURB[desk.slug] || ""} Sourced widely. Told plainly.`;
+  else if (page === "reflections") description = "Daily scripture, Stoic philosophy and the Commonplace Book, from Dalton Daily.";
+  else description = "The funnies from Dalton Daily: xkcd, Poorly Drawn Lines, Saturday Morning Breakfast Cereal and Existential Comics.";
   const path = `${base}${page === "home" ? "/" : `/${page}`}`;
   const jsonld = page === "home"
     ? [
@@ -670,8 +671,8 @@ ${body}
   <span><a href="/archive">Archive</a> &middot; <a href="/feed.xml">RSS</a></span>
   <span>Dalton Daily &middot; Memphis, Tennessee &middot; Filed ${esc(new Date(ed.generatedAt).toLocaleString("en-US", { timeZone: "America/Chicago", dateStyle: "medium", timeStyle: "short" }))} CT</span>
 </footer>`;
-  const title = page === "home" ? `Dalton Daily — ${base ? ed.longDate : "Sourced widely. Told plainly."}` : `${pageName} — Dalton Daily${base ? `, ${ed.longDate}` : ""}`;
-  return shell(title, inner, { description, path, image, imageAlt, ogTitle, jsonld, type: page === "home" ? "website" : "article" });
+  const title = page === "home" ? `Dalton Daily — Sourced Widely, Told Plainly${base ? ` (${ed.longDate})` : ""}` : `${pageName} — Dalton Daily${base ? `, ${ed.longDate}` : ""}`;
+  return shell(title, inner, { description, path, jsonld, type: "website" });
 }
 
 export function renderArchive(rows) {
