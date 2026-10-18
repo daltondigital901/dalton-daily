@@ -6,6 +6,8 @@ import { reportSection } from "./claude.js";
 import { fetchComics, fetchWeather } from "./comics.js";
 import { writeScripture, writeStoic, writeCommonplace } from "./devotions.js";
 import { findImages } from "./images.js";
+import { pingIndexNow } from "./indexnow.js";
+import { PAGES, SITE } from "./render.js";
 
 const BATCH = 6; // sections reported in parallel
 
@@ -99,7 +101,7 @@ export class EditionWorkflow extends WorkflowEntrypoint {
       weather: await fetchWeather(),
     }));
 
-    return await step.do("publish", async () => {
+    const published = await step.do("publish", async () => {
       const ids = [];
       for (const [key, stories] of Object.entries(sections)) {
         for (let i = 0; i < stories.length; i++) {
@@ -163,5 +165,12 @@ export class EditionWorkflow extends WorkflowEntrypoint {
       await env.DB.batch(stmts);
       return { date, stories: ids.length, searches, failed: Object.keys(errors) };
     });
+
+    // Tell search engines the new edition is up (best effort).
+    await step.do("indexnow", async () => {
+      try { await pingIndexNow(SITE, ["/", ...PAGES.map((p) => `/${p}`), `/${date}`]); } catch {}
+      return true;
+    });
+    return published;
   }
 }

@@ -27,7 +27,7 @@ A morning newspaper at https://www.daltondaily.com (the bare domain redirects to
 | `/admin/run` | Print today's edition now (`?date=YYYY-MM-DD` for another day) |
 | `/admin/status` | Last 15 runs, story counts, searches, errors |
 
-No login. The page is unlisted (noindex, robots.txt disallow). `/admin/run` is limited to one print per 20 minutes.
+No login. Public and indexable: canonical URLs, Open Graph/Twitter cards (share image at /og.jpg), JSON-LD, /sitemap.xml, /robots.txt, /feed.xml (RSS), and an IndexNow ping after each edition. The workers.dev and bare-domain addresses 301 to www. `/admin/run` is limited to one print per 20 minutes.
 
 ## Config
 

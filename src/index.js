@@ -1,4 +1,5 @@
-import { renderEdition, renderArchive, renderMessage, PAGES } from "./render.js";
+import { renderEdition, renderArchive, renderMessage, PAGES, SITE } from "./render.js";
+import { INDEXNOW_KEY } from "./indexnow.js";
 import { SECTIONS } from "./sections.js";
 import { ICONS } from "./icons.js";
 import { ticker } from "./ticker.js";
@@ -33,10 +34,10 @@ async function startEdition(env, date) {
   return instance.id;
 }
 
-function html(body, status = 200) {
+function html(body, status = 200, extra = {}) {
   return new Response(body, {
     status,
-    headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "x-robots-tag": "noindex, nofollow" },
+    headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=0, s-maxage=120, must-revalidate", ...extra },
   });
 }
 
@@ -50,15 +51,47 @@ async function latestEdition(env, date) {
 export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
-    // daltondaily.com -> www.daltondaily.com
-    if (url.hostname === "daltondaily.com") {
+    // One public address: daltondaily.com and the workers.dev URL both 301 to www.daltondaily.com.
+    if (url.hostname === "daltondaily.com" || url.hostname.endsWith(".workers.dev")) {
       url.hostname = "www.daltondaily.com";
       return Response.redirect(url.toString(), 301);
     }
     const { date: today } = localParts(env.TIMEZONE || "America/Chicago");
 
     if (url.pathname === "/api/ticker") return ticker(ctx);
-    if (url.pathname === "/robots.txt") return new Response("User-agent: *\nDisallow: /\n");
+    if (url.pathname === "/robots.txt") {
+      return new Response(`User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /api/\n\nSitemap: ${SITE}/sitemap.xml\n`, { headers: { "content-type": "text/plain" } });
+    }
+    if (url.pathname === `/${INDEXNOW_KEY}.txt`) return new Response(INDEXNOW_KEY, { headers: { "content-type": "text/plain" } });
+    if (url.pathname === "/og.jpg") {
+      return new Response(b64(ICONS.og), { headers: { "content-type": "image/jpeg", "cache-control": "public, max-age=604800" } });
+    }
+    if (url.pathname === "/sitemap.xml") {
+      const rows = await env.DB.prepare("SELECT date, created_at FROM editions WHERE status = 'complete' ORDER BY date DESC LIMIT 2000").all();
+      const latest = rows.results[0];
+      const lm = (r) => (r ? `<lastmod>${r.created_at.replace(" ", "T")}Z</lastmod>` : "");
+      const urls = [
+        `<url><loc>${SITE}/</loc>${lm(latest)}<changefreq>daily</changefreq><priority>1.0</priority></url>`,
+        ...PAGES.map((p) => `<url><loc>${SITE}/${p}</loc>${lm(latest)}<changefreq>daily</changefreq><priority>0.8</priority></url>`),
+        `<url><loc>${SITE}/archive</loc>${lm(latest)}<changefreq>daily</changefreq><priority>0.4</priority></url>`,
+        ...rows.results.map((r) => `<url><loc>${SITE}/${r.date}</loc>${lm(r)}<changefreq>never</changefreq><priority>0.5</priority></url>`),
+      ];
+      return new Response(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join("")}</urlset>`, {
+        headers: { "content-type": "application/xml; charset=utf-8", "cache-control": "public, max-age=900" },
+      });
+    }
+    if (url.pathname === "/feed.xml") {
+      const ed = await latestEdition(env);
+      const x = (t = "") => String(t).replace(/[<>&'"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" }[c]));
+      const deskOf = Object.fromEntries(SECTIONS.map((s) => [s.key, s.desk]));
+      const slug = { world: "world", money: "business", science: "technology", law: "law", local: "memphis", ideas: "ideas", culture: "culture", sports: "sports", travel: "travel" };
+      const stories = ed ? Object.values(ed.sections).flat().sort((a, b) => b.importance - a.importance).slice(0, 40) : [];
+      const when = ed ? new Date(ed.generatedAt).toUTCString() : new Date().toUTCString();
+      const items = stories.map((st) => `<item><title>${x(st.headline)}</title><link>${SITE}/${slug[deskOf[st.section]]}#s-${st.id}</link><guid isPermaLink="false">dd-${ed.date}-${st.id}</guid><pubDate>${when}</pubDate><description>${x(st.dek || "")}</description>${st.image?.src ? `<enclosure url="${x(st.image.src)}" type="image/jpeg" length="0"/>` : ""}</item>`).join("");
+      return new Response(`<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0"><channel><title>Dalton Daily</title><link>${SITE}/</link><description>Sourced widely. Told plainly. A morning newspaper from Memphis.</description><language>en-us</language><lastBuildDate>${when}</lastBuildDate>${items}</channel></rss>`, {
+        headers: { "content-type": "application/rss+xml; charset=utf-8", "cache-control": "public, max-age=900" },
+      });
+    }
     if (ICON_ROUTES[url.pathname]) {
       const [key, type] = ICON_ROUTES[url.pathname];
       return new Response(b64(ICONS[key]), { headers: { "content-type": type, "cache-control": "public, max-age=604800" } });
@@ -85,6 +118,9 @@ export default {
       return Response.json({ ok: true });
     }
 
+    if (url.pathname.startsWith("/admin/")) {
+      // fall through to the handlers below; responses carry noindex via renderMessage
+    }
     if (url.pathname === "/admin/run") {
       // No login, so guard the spend: at most one print every 20 minutes.
       const recent = await env.DB.prepare("SELECT 1 FROM runs WHERE started_at >= datetime('now', '-20 minutes')").first();

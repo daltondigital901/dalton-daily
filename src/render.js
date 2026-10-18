@@ -26,6 +26,7 @@ a{color:inherit}
 .ear.right{justify-self:end;text-align:right}
 .title{font-family:"UnifrakturMaguntia",serif;font-weight:400;font-size:clamp(50px,9.5vw,112px);line-height:.95;margin:0;text-align:center}
 .title a{text-decoration:none}
+p.title{margin:0}
 .motto{text-align:center;font-style:italic;color:var(--muted);font-size:14px;margin-top:6px}
 .dateline{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:4px double var(--rule);border-bottom:1px solid var(--rule);padding:7px 2px;font-family:"Libre Franklin",Arial,sans-serif;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase}
 nav.index{position:sticky;top:0;z-index:20;background:var(--paper);display:flex;flex-wrap:nowrap;justify-content:space-between;align-items:center;gap:0;padding:0;border-bottom:1px solid var(--hair);font-family:"Libre Franklin",Arial,sans-serif;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;overflow-x:auto;scrollbar-width:none}
@@ -95,7 +96,7 @@ figure.ph figcaption{font-family:"Libre Franklin",Arial,sans-serif;font-size:10.
 
 /* Desks and sections */
 .desk{margin-top:44px}
-.desk>h2{font-weight:900;text-transform:uppercase;letter-spacing:.08em;font-size:28px;text-align:center;padding:8px 0 7px;border-top:4px double var(--rule);border-bottom:1px solid var(--rule)}
+.desk>h2,.desk>h1.deskhead{font-weight:900;text-transform:uppercase;letter-spacing:.08em;font-size:28px;text-align:center;padding:8px 0 7px;border-top:4px double var(--rule);border-bottom:1px solid var(--rule)}
 .sec{margin-top:22px}
 .sec>h3{display:flex;align-items:center;gap:12px;font-family:"Libre Franklin",Arial,sans-serif;font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin:0 0 14px}
 .sec>h3::after{content:"";flex:1;border-top:1px solid var(--hair)}
@@ -214,7 +215,7 @@ blockquote.stoic p{margin:0 0 8px;text-align:left}
  .reflect>div{padding:18px 16px}
  .reflect.teaser .clip{-webkit-line-clamp:3}
  .desk{margin-top:22px}
- .desk>h2{font-size:23px}
+ .desk>h2,.desk>h1.deskhead{font-size:23px}
  .sec{margin-top:18px}
  /* Bigger tap targets */
  .src{font-size:12.5px;gap:6px 10px;line-height:1.6}
@@ -324,9 +325,46 @@ const SCRIPT = `
 })();
 </script>`;
 
-function shell(title, inner) {
+export const SITE = "https://www.daltondaily.com";
+const SITE_DESC =
+  "Dalton Daily is a morning newspaper from Memphis: world affairs, national security, business and markets, technology, AI, science, law, Memphis politics and events, ideas, arts and travel — sourced from primary documents, the foreign press and independent reporting.";
+const clip = (t = "", n = 158) => {
+  const x = stripTags(t).replace(/\s+/g, " ").trim();
+  return x.length <= n ? x : x.slice(0, x.lastIndexOf(" ", n - 1)).replace(/[,;:\s]+$/, "") + "…";
+};
+
+// meta: { description, path, image, imageAlt, noindex, type, jsonld }
+function headTags(title, meta = {}) {
+  const url = SITE + (meta.path || "/");
+  const img = meta.image || `${SITE}/og.jpg`;
+  const desc = clip(meta.description || SITE_DESC);
+  const tags = [
+    `<title>${esc(title)}</title>`,
+    `<meta name="description" content="${esc(desc)}">`,
+    meta.noindex ? `<meta name="robots" content="noindex,follow">` : `<meta name="robots" content="index,follow,max-image-preview:large">`,
+    `<link rel="canonical" href="${esc(url)}">`,
+    `<meta property="og:site_name" content="Dalton Daily">`,
+    `<meta property="og:type" content="${meta.type || "website"}">`,
+    `<meta property="og:locale" content="en_US">`,
+    `<meta property="og:title" content="${esc(meta.ogTitle || title)}">`,
+    `<meta property="og:description" content="${esc(desc)}">`,
+    `<meta property="og:url" content="${esc(url)}">`,
+    `<meta property="og:image" content="${esc(img)}">`,
+    ...(meta.image ? [] : [`<meta property="og:image:width" content="1200">`, `<meta property="og:image:height" content="630">`, `<meta property="og:image:type" content="image/jpeg">`]),
+    `<meta property="og:image:alt" content="${esc(meta.imageAlt || "Dalton Daily — Sourced widely. Told plainly.")}">`,
+    `<meta name="twitter:card" content="summary_large_image">`,
+    `<meta name="twitter:title" content="${esc(meta.ogTitle || title)}">`,
+    `<meta name="twitter:description" content="${esc(desc)}">`,
+    `<meta name="twitter:image" content="${esc(img)}">`,
+    `<link rel="alternate" type="application/rss+xml" title="Dalton Daily" href="${SITE}/feed.xml">`,
+    meta.jsonld ? `<script type="application/ld+json">${JSON.stringify(meta.jsonld).replace(/</g, "\\u003c")}</script>` : "",
+  ];
+  return tags.join("");
+}
+
+function shell(title, inner, meta = {}) {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(title)}</title><meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#f6f2e8" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#181714" media="(prefers-color-scheme: dark)"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Dalton Daily"><meta name="format-detection" content="telephone=no"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/manifest.webmanifest">${FONTS}<style>${CSS}</style></head>
+${headTags(title, meta)}<meta name="theme-color" content="#f6f2e8" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#181714" media="(prefers-color-scheme: dark)"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Dalton Daily"><meta name="format-detection" content="telephone=no"><link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="manifest" href="/manifest.webmanifest">${FONTS}<style>${CSS}</style></head>
 <body><div class="page">${inner}</div>${SCRIPT}</body></html>`;
 }
 
@@ -346,7 +384,7 @@ function masthead(ed, base = "", active = "") {
 <header>
   <div class="mast">
     <div class="ear">${weather}</div>
-    <div><h1 class="title"><a href="${base || "/"}">Dalton Daily</a></h1><div class="motto">Sourced widely. Told plainly.</div></div>
+    <div><${active === "home" ? "h1" : "p"} class="title"><a href="${base || "/"}">Dalton Daily</a></${active === "home" ? "h1" : "p"}><div class="motto">Sourced widely. Told plainly.</div></div>
     <div class="ear right"><b>Vol. I &middot; No. ${ed?.number || 1}</b>Morning edition<br>daltondaily.com</div>
   </div>
   <div class="dateline"><span>${esc(ed?.longDate || "")}</span><span>Memphis${w ? `<span class="mobile-weather"> &middot; ${w.high}°/${w.low}°</span>` : ""}<span class="desktop-only">, Tennessee</span></span><span>Est. 2026</span></div>
@@ -374,7 +412,7 @@ function paragraphs(body = "", dateline) {
 function photo(s, cls = "") {
   if (!s.image?.src) return "";
   const fb = s.image.fallback ? ` data-fallback="${esc(s.image.fallback)}" data-fallback-credit="${esc(s.image.fallbackCredit || "")}"` : "";
-  return `<figure class="ph ${cls}"><div class="frame"><img src="${esc(s.image.src)}" alt=""${fb} loading="lazy" decoding="async" referrerpolicy="no-referrer"></div><figcaption>${esc(s.image.credit || "")}</figcaption></figure>`;
+  return `<figure class="ph ${cls}"><div class="frame"><img src="${esc(s.image.src)}" alt="${esc(s.headline)}"${fb} loading="lazy" decoding="async" referrerpolicy="no-referrer"></div><figcaption>${esc(s.image.credit || "")}</figcaption></figure>`;
 }
 
 function sourcesLine(s) {
@@ -558,7 +596,7 @@ function deskPage(ed, desk) {
       return `<section class="sec" id="sec-${sec.key}"><h3>${esc(sec.name)}</h3>${sectionGrid(stories)}</section>`;
     })
     .join("");
-  return `<section class="desk"><h2>${esc(desk.name)}</h2>${inner || '<p class="missing">Nothing filed on this desk this morning.</p>'}</section>`;
+  return `<section class="desk"><h1 class="deskhead">${esc(desk.name)}</h1>${inner || '<p class="missing">Nothing filed on this desk this morning.</p>'}</section>`;
 }
 
 function comicsPage(ed) {
@@ -571,7 +609,7 @@ function comicsPage(ed) {
       <a class="go" href="${esc(c.link)}" target="_blank" rel="noopener">View at source &rarr;</a></div>`;
     })
     .join("");
-  return `<section class="desk"><h2>The Funnies</h2>${strips ? `<div class="comics">${strips}</div>` : '<p class="missing">No comics this morning.</p>'}</section>`;
+  return `<section class="desk"><h1 class="deskhead">The Funnies</h1>${strips ? `<div class="comics">${strips}</div>` : '<p class="missing">No comics this morning.</p>'}</section>`;
 }
 
 // "Next page" link at the foot of every inside page, so the paper reads front to back.
@@ -586,7 +624,6 @@ function turnPage(page, base) {
 }
 
 export function renderEdition(ed, { notice, page = "home", base = "" } = {}) {
-  const failed = Object.keys(ed.errors || {});
   const desk = DESKS.find((d) => d.slug === page);
   let body;
   if (page === "home") {
@@ -594,20 +631,47 @@ export function renderEdition(ed, { notice, page = "home", base = "" } = {}) {
   } else if (desk) {
     body = deskPage(ed, desk) + turnPage(page, base);
   } else if (page === "reflections") {
-    body = `<section class="desk"><h2>Reflections</h2>${reflections(ed)}</section>` + turnPage(page, base);
+    body = `<section class="desk"><h1 class="deskhead">Reflections</h1>${reflections(ed)}</section>` + turnPage(page, base);
   } else {
     body = comicsPage(ed) + turnPage(page, base);
   }
   const pageName = desk?.name || (page === "reflections" ? "Reflections" : page === "comics" ? "Comics" : "");
+  const all = Object.values(ed.sections || {}).flat();
+  const byId = Object.fromEntries(all.map((x) => [x.id, x]));
+  const lead = byId[(ed.front || [])[0]];
+  let description, image, imageAlt, ogTitle;
+  if (page === "home") {
+    const tops = (ed.front || []).map((id) => byId[id]).filter(Boolean).map((x) => x.headline);
+    description = tops.length
+      ? `A morning newspaper from Memphis, sourced from primary documents, the foreign press and independent reporting. Today: ${tops.slice(0, 2).join("; ")}.`
+      : SITE_DESC;
+    ogTitle = lead ? `Dalton Daily — ${lead.headline}` : "Dalton Daily";
+  } else if (desk) {
+    const ds = SECTIONS.filter((x) => x.desk === desk.key).flatMap((x) => ed.sections[x.key] || []).sort((a, b) => b.importance - a.importance);
+    description = ds.length ? `${desk.name}, ${ed.longDate}: ${ds.slice(0, 3).map((x) => x.headline).join("; ")}.` : `${desk.name} from Dalton Daily.`;
+  } else if (page === "reflections") {
+    const d = ed.devotions || {};
+    description = [d.scripture && `Scripture: ${d.scripture.reference}`, d.stoic && `Stoic: ${d.stoic.author}, ${d.stoic.work}`, d.commonplace && `The Commonplace Book: ${d.commonplace.title}`].filter(Boolean).join(" · ") || "Daily scripture, Stoic philosophy and the Commonplace Book.";
+  } else {
+    description = `Today's funnies: ${(ed.comics || []).map((c) => c.strip).join(", ")}.`;
+  }
+  const path = `${base}${page === "home" ? "/" : `/${page}`}`;
+  const jsonld = page === "home"
+    ? [
+        { "@context": "https://schema.org", "@type": "NewsMediaOrganization", name: "Dalton Daily", url: SITE + "/", logo: { "@type": "ImageObject", url: `${SITE}/icon-512.png`, width: 512, height: 512 }, slogan: "Sourced widely. Told plainly.", foundingDate: "2026", foundingLocation: "Memphis, Tennessee" },
+        { "@context": "https://schema.org", "@type": "WebSite", name: "Dalton Daily", url: SITE + "/", inLanguage: "en-US" },
+      ]
+    : { "@context": "https://schema.org", "@type": "CollectionPage", name: `${pageName} — Dalton Daily`, url: SITE + path, datePublished: ed.generatedAt, isPartOf: { "@type": "WebSite", name: "Dalton Daily", url: SITE + "/" } };
   const inner = `
 ${masthead(ed, base, page)}
 ${notice ? `<div class="notice">${notice}</div>` : ""}
 ${body}
 <footer>
-  <span><a href="/archive">Archive</a> &middot; <a href="/admin/status">Press room</a></span>
-  <span>Filed ${esc(new Date(ed.generatedAt).toLocaleString("en-US", { timeZone: "America/Chicago", dateStyle: "medium", timeStyle: "short" }))} CT &middot; ${ed.searches || 0} searches${failed.length ? ` &middot; missing: ${esc(failed.join(", "))}` : ""}</span>
+  <span><a href="/archive">Archive</a> &middot; <a href="/feed.xml">RSS</a></span>
+  <span>Dalton Daily &middot; Memphis, Tennessee &middot; Filed ${esc(new Date(ed.generatedAt).toLocaleString("en-US", { timeZone: "America/Chicago", dateStyle: "medium", timeStyle: "short" }))} CT</span>
 </footer>`;
-  return shell(`Dalton Daily${pageName ? ` — ${pageName}` : ""} — ${ed.longDate}`, inner);
+  const title = page === "home" ? `Dalton Daily — ${base ? ed.longDate : "Sourced widely. Told plainly."}` : `${pageName} — Dalton Daily${base ? `, ${ed.longDate}` : ""}`;
+  return shell(title, inner, { description, path, image, imageAlt, ogTitle, jsonld, type: page === "home" ? "website" : "article" });
 }
 
 export function renderArchive(rows) {
@@ -615,11 +679,12 @@ export function renderArchive(rows) {
     .map((r) => `<li><a href="/${esc(r.date)}">${esc(new Date(r.date + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "short", month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }))}</a></li>`)
     .join("");
   return shell(
-    "Dalton Daily — Archive",
-    `${masthead(null)}<section class="desk"><h2>The Morgue</h2>${items ? `<ul class="archive">${items}</ul>` : `<p class="missing">No editions yet.</p>`}</section>`
+    "Archive — Dalton Daily",
+    `${masthead(null)}<section class="desk"><h1 class="deskhead">The Morgue</h1>${items ? `<ul class="archive">${items}</ul>` : `<p class="missing">No editions yet.</p>`}</section>`,
+    { path: "/archive", description: "Every past edition of Dalton Daily, the morning newspaper from Memphis." }
   );
 }
 
 export function renderMessage(title, html) {
-  return shell(`Dalton Daily — ${title}`, `${masthead(null)}<div class="notice">${html}</div>`);
+  return shell(`Dalton Daily — ${title}`, `${masthead(null)}<div class="notice">${html}</div>`, { noindex: true });
 }
