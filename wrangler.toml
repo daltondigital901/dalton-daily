@@ -12,15 +12,16 @@ custom_domain = true
 pattern = "daltondaily.com"
 custom_domain = true
 
-# Printed by 3:00 AM Central: first attempt at 2:00 AM, backup attempt at 2:30 AM if the first did not land.
-# Both UTC slots fire year-round; the handler only acts in the slot that is 2 AM in Chicago (handles DST).
+# Printed by 3:00 AM Central. Midnight: batch run (half price) with a 2:15 AM deadline and live fallback;
+# 12:30: retry slot; 2:30: last-resort live run. Both CDT and CST UTC slots fire; the handler acts only
+# on the slot that matches Chicago local time.
 [triggers]
-crons = ["0 7 * * *", "30 7 * * *", "0 8 * * *", "30 8 * * *"]
+crons = ["0 5 * * *", "30 5 * * *", "0 6 * * *", "30 6 * * *", "30 7 * * *", "30 8 * * *"]
 
 [vars]
 MODEL = "claude-sonnet-5-5"
 TIMEZONE = "America/Chicago"
-EDITION_HOUR = "2"
+EDITION_HOUR = "0"
 SEARCHES_PER_SECTION = "7"
 SEARCH_TOOL = "web_search_20250305"
 

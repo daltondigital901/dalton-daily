@@ -10,65 +10,73 @@ const BLOCKED = [
   "ts2.tech", "opentools.ai", "theoutpost.ai", "devdiscourse.com", "newsnow.co.uk",
 ];
 
-// Web search with dynamic filtering: Claude filters results in code before they enter its context,
-// so the same searches cost far fewer input tokens. Set SEARCH_TOOL=web_search_20250305 to go back.
+// Web search tool. SEARCH_TOOL picks the version; web_search_20250305 (basic) measured cheaper and
+// faster for this paper than the dynamic-filtering versions, which ran longer and used more tokens.
 export function searchTool(env, extra = {}) {
-  const type = env.SEARCH_TOOL || "web_search_20260318";
+  const type = env.SEARCH_TOOL || "web_search_20250305";
   const tool = { type, name: "web_search", ...extra };
   if (type === "web_search_20260318") tool.response_inclusion = "excluded";
   return tool;
 }
 
-export async function callClaude(env, { system, prompt, tools = [], maxTokens = 8000 }) {
-  const messages = [{ role: "user", content: prompt }];
-  const texts = [];
-  const citedUrls = new Map();
-  let searches = 0;
-  const usage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
+// The request body for one Claude call; shared by live calls and the Batch API.
+export function requestBody(env, { system, prompt, tools = [], maxTokens = 8000 }, messages) {
+  return {
+    model: env.MODEL || "claude-sonnet-5-5",
+    max_tokens: maxTokens,
+    // An explicit cache marker turns on prompt caching, which also caches each web search result
+    // as the server-side search loop goes, so later search turns re-read them at 5% of input price.
+    system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
+    messages: messages || [{ role: "user", content: prompt }],
+    ...(tools.length ? { tools } : {}),
+  };
+}
 
+export function newOutcome() {
+  return { texts: [], citedUrls: {}, searches: 0, usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } };
+}
+
+// Fold one Messages API response into an outcome (text, citations, searches, token usage).
+export function collect(out, data) {
+  out.searches += data.usage?.server_tool_use?.web_search_requests || 0;
+  out.usage.input += data.usage?.input_tokens || 0;
+  out.usage.output += data.usage?.output_tokens || 0;
+  out.usage.cacheRead += data.usage?.cache_read_input_tokens || 0;
+  out.usage.cacheWrite += data.usage?.cache_creation_input_tokens || 0;
+  for (const block of data.content || []) {
+    if (block.type === "text") {
+      out.texts.push(block.text);
+      for (const c of block.citations || []) if (c.url) out.citedUrls[c.url] = c.title || c.url;
+    }
+  }
+  return out;
+}
+
+export function finishOutcome(out) {
+  return { text: out.texts.join(""), citedUrls: new Map(Object.entries(out.citedUrls)), searches: out.searches, usage: out.usage };
+}
+
+export async function callClaude(env, req) {
+  const messages = [{ role: "user", content: req.prompt }];
+  const out = newOutcome();
   for (let turn = 0; turn < 6; turn++) {
     const res = await fetch(API, {
       method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": env.ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: env.MODEL || "claude-sonnet-5-5",
-        max_tokens: maxTokens,
-        // An explicit cache marker turns on prompt caching, which also caches each web search result
-        // as the server-side search loop goes, so later search turns re-read them at 5% of input price.
-        system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
-        messages,
-        ...(tools.length ? { tools } : {}),
-      }),
+      headers: { "content-type": "application/json", "x-api-key": env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
+      body: JSON.stringify(requestBody(env, req, messages)),
     });
     if (!res.ok) {
       const body = await res.text();
       throw new Error(`Claude API ${res.status}: ${body.slice(0, 500)}`);
     }
     const data = await res.json();
-    searches += data.usage?.server_tool_use?.web_search_requests || 0;
-    usage.input += data.usage?.input_tokens || 0;
-    usage.output += data.usage?.output_tokens || 0;
-    usage.cacheRead += data.usage?.cache_read_input_tokens || 0;
-    usage.cacheWrite += data.usage?.cache_creation_input_tokens || 0;
-
-    for (const block of data.content || []) {
-      if (block.type === "text") {
-        texts.push(block.text);
-        for (const c of block.citations || []) {
-          if (c.url) citedUrls.set(c.url, c.title || c.url);
-        }
-      }
-    }
+    collect(out, data);
     // Long search turns can pause; send the paused message back unchanged to continue.
     if (data.stop_reason === "pause_turn") {
       messages.push({ role: "assistant", content: data.content });
       continue;
     }
-    return { text: texts.join(""), citedUrls, searches, usage };
+    return finishOutcome(out);
   }
   throw new Error("Claude API: too many paused turns");
 }
@@ -122,7 +130,7 @@ function cleanStory(s) {
   };
 }
 
-export async function reportSection(env, section, ctx) {
+export function sectionRequest(env, section, ctx) {
   const today = ctx.longDate;
   const system = [
     `You are a staff reporter for Dalton Daily, a morning newspaper published in Memphis. Today is ${today}.`,
@@ -189,7 +197,10 @@ export async function reportSection(env, section, ctx) {
     };
   }
 
-  const { text, citedUrls, searches, usage } = await callClaude(env, { system, prompt, tools: [tool] });
+  return { system, prompt, tools: [tool] };
+}
+
+export function finishSection(section, { text, citedUrls, searches, usage }) {
   let parsed;
   try {
     parsed = extractJson(text);
@@ -201,4 +212,8 @@ export async function reportSection(env, section, ctx) {
   const fallback = [...citedUrls.entries()].slice(0, 2).map(([url, title]) => ({ name: title, url }));
   for (const s of stories) if (!s.sources.length) s.sources = fallback;
   return { stories: stories.slice(0, section.count), searches, usage };
+}
+
+export async function reportSection(env, section, ctx) {
+  return finishSection(section, await callClaude(env, sectionRequest(env, section, ctx)));
 }

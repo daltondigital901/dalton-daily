@@ -2,9 +2,10 @@
 // so a slow or failed beat never sinks the whole paper.
 import { WorkflowEntrypoint } from "cloudflare:workers";
 import { SECTIONS } from "./sections.js";
-import { reportSection } from "./claude.js";
+import { reportSection, sectionRequest, finishSection } from "./claude.js";
+import { submitBatch, getBatch, cancelBatch, batchResults } from "./batch.js";
 import { fetchComics, fetchWeather } from "./comics.js";
-import { writeScripture, writeStoic, writeCommonplace } from "./devotions.js";
+import { writeScripture, writeStoic, writeCommonplace, stoicRequest, finishStoic, commonplaceRequest, finishCommonplace } from "./devotions.js";
 import { findImages } from "./images.js";
 import { pingIndexNow } from "./indexnow.js";
 import { PAGES, SITE } from "./render.js";
@@ -64,11 +65,67 @@ export class EditionWorkflow extends WorkflowEntrypoint {
     const errors = {};
     let searches = 0;
     const tokens = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
-    const addUsage = (u) => { if (!u) return; for (const k of Object.keys(tokens)) tokens[k] += u[k] || 0; };
-    for (let i = 0; i < SECTIONS.length; i += BATCH) {
-      const batch = SECTIONS.slice(i, i + BATCH);
+    const batchTokens = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
+    const addUsage = (u, into = tokens) => { if (!u) return; for (const k of Object.keys(into)) into[k] += u[k] || 0; };
+    const fromBatch = (o) => ({ ...o, citedUrls: new Map(Object.entries(o.citedUrls || {})) });
+    let stoic = null, commonplace = null;
+
+    // 1) Overnight runs go through the Batch API first (half the token price).
+    let batched = {};
+    if (event.payload.batch) {
+      try {
+        const sub = await step.do("batch submit", { retries: { limit: 2, delay: "30 seconds" } }, async () => {
+          const items = [
+            ...SECTIONS.map((sec) => ({ id: `section:${sec.key}`, req: sectionRequest(env, sec, ctx) })),
+            { id: "stoic", req: stoicRequest(env, ctx, date) },
+            { id: "commonplace", req: commonplaceRequest(env, ctx, date) },
+          ];
+          return { id: await submitBatch(env, items), deadline: Date.now() + (event.payload.batchMinutes || 135) * 60000 };
+        });
+        for (let n = 0; n < 200; n++) {
+          const st = await step.do(`batch poll ${n}`, async () => {
+            const b = await getBatch(env, sub.id);
+            return { status: b.processing_status, now: Date.now() };
+          });
+          if (st.status === "ended" || st.now > sub.deadline) break;
+          await step.sleep(`batch wait ${n}`, "90 seconds");
+        }
+        batched = await step.do("batch results", { retries: { limit: 2, delay: "20 seconds" }, timeout: "5 minutes" }, async () => {
+          let b = await getBatch(env, sub.id);
+          if (b.processing_status !== "ended") {
+            await cancelBatch(env, sub.id);
+            for (let i = 0; i < 12 && b.processing_status !== "ended"; i++) {
+              await new Promise((r) => setTimeout(r, 5000));
+              b = await getBatch(env, sub.id);
+            }
+          }
+          return b.processing_status === "ended" && b.results_url ? await batchResults(env, b.results_url) : {};
+        });
+      } catch (e) {
+        errors.batch = String(e?.message || e).slice(0, 300);
+        batched = {};
+      }
+    }
+    for (const sec of SECTIONS) {
+      const o = batched[`section:${sec.key}`];
+      if (!o) continue;
+      try {
+        const r = finishSection(sec, fromBatch(o));
+        sections[sec.key] = r.stories; searches += r.searches; addUsage(r.usage, batchTokens);
+      } catch {}
+    }
+    if (batched.stoic) { try { stoic = finishStoic(date, fromBatch(batched.stoic)); } catch {} }
+    if (batched.commonplace) { try { commonplace = finishCommonplace(date, fromBatch(batched.commonplace)); } catch {} }
+    for (const d of [stoic, commonplace]) {
+      if (d?._usage) { addUsage(d._usage, batchTokens); searches += d._usage.searches || 0; delete d._usage; }
+    }
+
+    // 2) Everything else (all of it on a live run) is reported live, six sections at a time.
+    const todo = SECTIONS.filter((sec) => !sections[sec.key]);
+    for (let i = 0; i < todo.length; i += BATCH) {
+      const group = todo.slice(i, i + BATCH);
       const results = await Promise.all(
-        batch.map(async (section) => {
+        group.map(async (section) => {
           try {
             const r = await step.do(
               `section ${section.key}`,
@@ -92,17 +149,22 @@ export class EditionWorkflow extends WorkflowEntrypoint {
     ).catch(() => ({}));
 
     const retry = { retries: { limit: 2, delay: "20 seconds", backoff: "exponential" }, timeout: "5 minutes" };
-    const [scripture, commonplace, stoic] = await Promise.all([
+    const [scripture, cpLive, stLive] = await Promise.all([
       step.do("scripture", retry, () => writeScripture(env, ctx)).catch((e) => { errors.scripture = String(e?.message || e).slice(0, 400); return null; }),
-      step.do("commonplace", retry, () => writeCommonplace(env, ctx, date)).catch((e) => { errors.commonplace = String(e?.message || e).slice(0, 400); return null; }),
-      step.do("stoic reading", retry, () => writeStoic(env, ctx, date)).catch((e) => { errors.stoic = String(e?.message || e).slice(0, 400); return null; }),
+      commonplace ? null : step.do("commonplace", retry, () => writeCommonplace(env, ctx, date)).catch((e) => { errors.commonplace = String(e?.message || e).slice(0, 400); return null; }),
+      stoic ? null : step.do("stoic reading", retry, () => writeStoic(env, ctx, date)).catch((e) => { errors.stoic = String(e?.message || e).slice(0, 400); return null; }),
     ]);
+    commonplace = commonplace || cpLive;
+    stoic = stoic || stLive;
 
     for (const d of [scripture, commonplace, stoic]) {
       if (d?._usage) { addUsage(d._usage); searches += d._usage.searches || 0; delete d._usage; }
     }
-    // Claude Sonnet 5.5: $2/M input, $10/M output; cache writes 1.25x and reads 0.05x of input; web search $10 per 1,000.
-    const cost = +(searches * 0.01 + tokens.input * 2e-6 + tokens.output * 1e-5 + tokens.cacheRead * 1e-7 + tokens.cacheWrite * 2.5e-6).toFixed(2);
+    // Claude Sonnet 5.5: $2/M input, $10/M output; cache writes 1.25x and reads 0.05x of input;
+    // Batch API halves token prices; web search $10 per 1,000 either way.
+    const tokCost = (t) => t.input * 2e-6 + t.output * 1e-5 + t.cacheRead * 1e-7 + t.cacheWrite * 2.5e-6;
+    const cost = +(searches * 0.01 + tokCost(tokens) + tokCost(batchTokens) / 2).toFixed(2);
+    const batchedCount = SECTIONS.filter((sec) => batched[`section:${sec.key}`]).length;
 
     const extras = await step.do("comics and weather", async () => ({
       comics: await fetchComics(),
@@ -166,7 +228,7 @@ export class EditionWorkflow extends WorkflowEntrypoint {
           "UPDATE runs SET finished_at = datetime('now'), status = ?, detail = ? WHERE id = (SELECT MAX(id) FROM runs WHERE date = ?)"
         ).bind(
           Object.keys(errors).length ? "partial" : "ok",
-          JSON.stringify({ stories: ids.length, images: ids.filter((s) => s.image).length, searches, tokens, cost, errors }),
+          JSON.stringify({ stories: ids.length, images: ids.filter((s) => s.image).length, searches, tokens, batchTokens, batched: batchedCount, cost, errors }),
           date
         ),
       ];

@@ -22,15 +22,15 @@ export { EditionWorkflow } from "./workflow.js";
 
 function localParts(tz) {
   const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23" })
+    new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
       .formatToParts(new Date())
       .map((p) => [p.type, p.value])
   );
-  return { date: `${parts.year}-${parts.month}-${parts.day}`, hour: Number(parts.hour) };
+  return { date: `${parts.year}-${parts.month}-${parts.day}`, hour: Number(parts.hour), minute: Number(parts.minute) };
 }
 
-async function startEdition(env, date) {
-  const instance = await env.EDITION.create({ id: `ed-${date}-${Date.now()}`, params: { date } });
+async function startEdition(env, date, opts = {}) {
+  const instance = await env.EDITION.create({ id: `ed-${date}-${Date.now()}`, params: { date, ...opts } });
   return instance.id;
 }
 
@@ -128,7 +128,8 @@ export default {
         return html(renderMessage("Reprint", `The presses already ran in the last 20 minutes. <a href="/admin/status">Check status</a>`), 429);
       }
       const date = /^\d{4}-\d{2}-\d{2}$/.test(url.searchParams.get("date") || "") ? url.searchParams.get("date") : today;
-      const id = await startEdition(env, date);
+      const batch = url.searchParams.get("batch") === "1";
+      const id = await startEdition(env, date, batch ? { batch: true, batchMinutes: Number(url.searchParams.get("minutes") || 60) } : {});
       return html(renderMessage("Reprint", `The presses are running for ${date}. The edition usually lands in 5&ndash;10 minutes. <a href="/admin/status">Check status</a> &middot; instance <code>${id}</code>`));
     }
 
@@ -162,16 +163,23 @@ export default {
     return new Response("Not found", { status: 404 });
   },
 
+  // Overnight schedule (Central time): midnight starts the edition through the Batch API at half price,
+  // with a deadline of 2:15 AM after which unfinished sections are reported live. 12:30 is a retry slot
+  // and 2:30 is a last-resort fully live run, so the paper is out by 3 AM.
   async scheduled(event, env, ctx) {
-    const { date, hour } = localParts(env.TIMEZONE || "America/Chicago");
-    if (hour !== Number(env.EDITION_HOUR || 2)) return; // the other UTC slots (DST) do nothing
+    const { date, hour, minute } = localParts(env.TIMEZONE || "America/Chicago");
+    const start = Number(env.EDITION_HOUR || 0);
     const exists = await env.DB.prepare("SELECT 1 FROM editions WHERE date = ? AND status = 'complete'").bind(date).first();
     if (exists) return;
-    // Backup slot: skip if an attempt is still running from the last 25 minutes.
-    const running = await env.DB.prepare(
-      "SELECT 1 FROM runs WHERE date = ? AND status = 'running' AND started_at >= datetime('now', '-25 minutes')"
-    ).bind(date).first();
-    if (running) return;
-    ctx.waitUntil(startEdition(env, date));
+    const runningWithin = async (mins) =>
+      env.DB.prepare(`SELECT 1 FROM runs WHERE date = ? AND status = 'running' AND started_at >= datetime('now', '-${mins} minutes')`).bind(date).first();
+    if (hour === start) {
+      if (await runningWithin(170)) return;
+      const minutesToDeadline = Math.max(30, 135 - minute);
+      ctx.waitUntil(startEdition(env, date, { batch: true, batchMinutes: minutesToDeadline }));
+    } else if (hour === start + 2 && minute >= 30) {
+      if (await runningWithin(170)) return;
+      ctx.waitUntil(startEdition(env, date));
+    }
   },
 };

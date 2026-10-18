@@ -4,7 +4,7 @@ A morning newspaper at https://www.daltondaily.com (the bare domain redirects to
 
 ## How it works
 
-- Printed **by 3:00 AM Central** every day: a cron starts the Workflow at 2:00 AM, with a backup attempt at 2:30 AM if the first did not land.
+- Printed **by 3:00 AM Central**: at midnight the edition is submitted to the Anthropic Batch API (half the token price). Anything not back by 2:15 AM is reported live. A 2:30 AM live run is the last-resort safety net. Prompt caching covers the web-search loop. Each run records tokens and estimated cost in /admin/status.
 - Reporters are told to source beyond U.S. legacy media: primary documents, foreign press, investigative outlets and independent newsletters. Each source is tagged by kind.
 - The Workflow reports 17 sections (6 at a time). Each section is one Claude API call with the web search tool, returning JSON stories. Each section is its own durable step with retries, so one failure never blocks the paper.
 - The 5 most important stories (one per section max) make the front page.

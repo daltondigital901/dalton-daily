@@ -79,7 +79,7 @@ export function stoicFocus(dateIso) {
   return { obscure: false, pool: STOIC_MAJOR[day % STOIC_MAJOR.length] };
 }
 
-export async function writeStoic(env, ctx, dateIso) {
+export function stoicRequest(env, ctx, dateIso) {
   const focus = stoicFocus(dateIso);
   const recent = ctx.recentStoic || [];
   const system = [
@@ -101,7 +101,7 @@ export async function writeStoic(env, ctx, dateIso) {
     'JSON shape: <json>{"author":"Name","work":"Work title","citation":"Book 2, section 4","translator":"Translator, year | Translated for Dalton Daily","url":"https://link to the text (Perseus, Wikisource, LacusCurtius, Project Gutenberg) or blank","passage":"The passage","context":"One or two sentences: who this was and how the text survived","reflection":"Three or four sentences of plain reflection in your own words, connected to ordinary life","practice":"One concrete exercise for today"}</json>',
   ].filter(Boolean).join("\n\n");
 
-  const { text, usage, searches } = await callClaude(env, {
+  return {
     system,
     prompt,
     maxTokens: 3000,
@@ -109,7 +109,11 @@ export async function writeStoic(env, ctx, dateIso) {
       max_uses: 4,
       allowed_domains: ["perseus.tufts.edu", "wikisource.org", "en.wikisource.org", "penelope.uchicago.edu", "gutenberg.org", "thelatinlibrary.com", "sacred-texts.com", "attalus.org", "archive.org", "stoicsource.com", "plato.stanford.edu", "iep.utm.edu"],
     })],
-  });
+  };
+}
+
+export function finishStoic(dateIso, { text, usage, searches }) {
+  const focus = stoicFocus(dateIso);
   const r = extractJson(text);
   return {
     author: scrub(r.author || ""),
@@ -144,7 +148,7 @@ export function commonplaceFocus(dateIso) {
   return COMMONPLACE[day % COMMONPLACE.length];
 }
 
-export async function writeCommonplace(env, ctx, dateIso) {
+export function commonplaceRequest(env, ctx, dateIso) {
   const focus = commonplaceFocus(dateIso);
   const recent = ctx.recentCommonplace || [];
   const system = [
@@ -162,7 +166,7 @@ export async function writeCommonplace(env, ctx, dateIso) {
     recent.length ? `Do NOT repeat any of these recent subjects:\n- ${recent.join("\n- ")}` : "",
     'JSON shape: <json>{"field":"' + focus.field + '","title":"A short, specific title","dek":"One line on why it is worth knowing","essay":"220-320 words in three or four short paragraphs separated by a blank line","takeaway":"One sentence to remember","further":"A good next read: author and title","source":"Name of the main source","url":"https://..."}</json>',
   ].filter(Boolean).join("\n\n");
-  const { text, citedUrls, usage, searches } = await callClaude(env, {
+  return {
     system,
     prompt,
     maxTokens: 3000,
@@ -170,7 +174,11 @@ export async function writeCommonplace(env, ctx, dateIso) {
       max_uses: 4,
       allowed_domains: ["plato.stanford.edu", "iep.utm.edu", "britannica.com", "en.wikipedia.org", "newadvent.org", "ccel.org", "perseus.tufts.edu", "gutenberg.org", "nature.com", "science.org", "nasa.gov", "si.edu", "loc.gov", "archives.gov", "history.state.gov", "hbs.edu", "hbr.org", "nobelprize.org", "royalsociety.org", "bl.uk", "metmuseum.org", "poetryfoundation.org", "jstor.org"],
     })],
-  });
+  };
+}
+
+export function finishCommonplace(dateIso, { text, citedUrls, usage, searches }) {
+  const focus = commonplaceFocus(dateIso);
   const r = extractJson(text);
   let url = /^https:\/\//.test(r.url || "") ? r.url : [...citedUrls.keys()][0] || "";
   return {
@@ -184,4 +192,12 @@ export async function writeCommonplace(env, ctx, dateIso) {
     url,
     _usage: { ...usage, searches },
   };
+}
+
+export async function writeStoic(env, ctx, dateIso) {
+  return finishStoic(dateIso, await callClaude(env, stoicRequest(env, ctx, dateIso)));
+}
+
+export async function writeCommonplace(env, ctx, dateIso) {
+  return finishCommonplace(dateIso, await callClaude(env, commonplaceRequest(env, ctx, dateIso)));
 }
