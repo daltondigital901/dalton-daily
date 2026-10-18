@@ -1,6 +1,6 @@
 # Dalton Daily
 
-A private, one-reader morning newspaper. Standalone project: its own Worker, D1 database and repo, nothing shared with Dalton Digital.
+A morning newspaper at https://www.daltondaily.com (the bare domain redirects to www). Standalone project: its own Worker, D1 database and repo, nothing shared with Dalton Digital.
 
 ## How it works
 
@@ -38,4 +38,4 @@ Sections and their briefs: `src/sections.js`.
 
 Push to `main`. GitHub Actions applies `schema.sql` and runs `wrangler deploy`.
 
-Repo secrets required: `CLOUDFLARE_API_TOKEN` (Account: Workers Scripts Edit, D1 Edit, Account Settings Read), `CLOUDFLARE_ACCOUNT_ID`, `ANTHROPIC_API_KEY`.
+Repo secrets required: `CLOUDFLARE_API_TOKEN` (Account: Workers Scripts Edit, D1 Edit, Account Settings Read; Zone daltondaily.com: Workers Routes Edit, DNS Edit), `CLOUDFLARE_ACCOUNT_ID`, `ANTHROPIC_API_KEY`.
