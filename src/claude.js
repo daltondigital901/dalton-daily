@@ -63,6 +63,15 @@ export function extractJson(text) {
   return JSON.parse(raw);
 }
 
+// Remove citation markup and stray tags the model sometimes copies into its JSON text.
+export function scrub(t) {
+  return String(t || "")
+    .replace(/<\/?cite\b[^>]*>/gi, "")
+    .replace(/<\/?[a-z][^>]*>/gi, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
+
 function cleanStory(s) {
   const sources = Array.isArray(s.sources)
     ? s.sources
@@ -75,11 +84,11 @@ function cleanStory(s) {
         .slice(0, 5)
     : [];
   return {
-    headline: String(s.headline || "").trim(),
-    dek: String(s.dek || "").trim(),
-    body: String(s.body || "").trim(),
-    why: String(s.why || "").trim(),
-    dateline: String(s.dateline || "").trim(),
+    headline: scrub(s.headline),
+    dek: scrub(s.dek),
+    body: scrub(s.body),
+    why: scrub(s.why),
+    dateline: scrub(s.dateline),
     importance: Math.max(1, Math.min(10, Number(s.importance) || 5)),
     update: Boolean(s.update),
     sources,
@@ -119,6 +128,8 @@ export async function reportSection(env, section, ctx) {
     "    independent = a named writer's own newsletter or site (Substack, Ghost, personal blog) with real expertise",
     "    magazine = policy, ideas and general-interest magazines (Foreign Policy, Foreign Affairs, The Economist, The Atlantic...)",
     "    trade = specialist industry press (Utility Dive, BleepingComputer, Law360, Variety...);  research = think tanks, NGOs, data/monitoring groups, law-firm client alerts",
+    "- Write as the newspaper, in the third person. Never refer to yourself, your searches or 'the pages I found'. If a detail such as a price is unknown, leave it out rather than saying it could not be found.",
+    "- Plain text only inside the JSON: no citation markup, no <cite> tags, no HTML, no markdown.",
     "- Return ONLY a JSON object wrapped in <json></json> tags. No other prose.",
   ].join("\n");
 

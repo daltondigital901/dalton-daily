@@ -1,8 +1,10 @@
 // Newspaper-style HTML for Dalton Daily.
 import { DESKS, SECTIONS } from "./sections.js";
 
+// Strip any citation markup the model leaked into text (e.g. <cite index="2-5">…</cite>) before escaping.
+const stripTags = (s) => String(s).replace(/<\/?cite\b[^>]*>/gi, "").replace(/<\/?(?:b|i|em|strong|span|a)\b[^>]*>/gi, "");
 const esc = (s = "") =>
-  String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  stripTags(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 const SECTION_BY_KEY = Object.fromEntries(SECTIONS.map((s) => [s.key, s]));
 const label = (s) => SECTION_BY_KEY[s.section]?.name || "";

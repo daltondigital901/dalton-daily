@@ -6,7 +6,7 @@
 // SLAA: Claude searches only slaafws.org (the Augustine Fellowship's own site and store) and writes
 // a reading in its own words, citing and linking the SLAA document it draws on. SLAA literature is
 // copyrighted, so the reading paraphrases and links rather than reprinting.
-import { callClaude, extractJson } from "./claude.js";
+import { callClaude, extractJson, scrub } from "./claude.js";
 
 const TRANSLATION = "web";
 
@@ -57,8 +57,8 @@ export async function writeScripture(env, ctx) {
   } catch {}
   return {
     reference,
-    theme: String(pick.theme || ""),
-    reflection: String(pick.reflection || ""),
+    theme: scrub(pick.theme || ""),
+    reflection: scrub(pick.reflection || ""),
     verses,
     translation: "World English Bible",
     link: `https://www.biblegateway.com/passage/?search=${encodeURIComponent(reference)}&version=WEB`,
@@ -78,6 +78,7 @@ export async function writeSlaaReading(env, ctx, dateIso) {
     "  passages. At most one short quoted phrase under 12 words, clearly attributed.",
     "- Name the specific SLAA document you drew on and give its URL from your search results.",
     "- Do not give medical or clinical advice. Do not diagnose.",
+    "- Plain text only inside the JSON: no citation markup, no <cite> tags, no HTML. Never refer to yourself or your searches.",
     "- Return ONLY JSON wrapped in <json></json>.",
   ].join("\n");
   const prompt = [
@@ -99,12 +100,12 @@ export async function writeSlaaReading(env, ctx, dateIso) {
   let url = typeof r.url === "string" && /^https?:\/\/([a-z0-9-]+\.)*slaafws\.org/i.test(r.url) ? r.url : "";
   if (!url) url = [...citedUrls.keys()].find((u) => /slaafws\.org/i.test(u)) || "https://slaafws.org/";
   return {
-    title: String(r.title || "Today's reading"),
-    source: String(r.source || "SLAA literature"),
+    title: scrub(r.title || "Today's reading"),
+    source: scrub(r.source || "SLAA literature"),
     url,
-    reading: String(r.reading || ""),
-    practice: String(r.practice || ""),
-    question: String(r.question || ""),
+    reading: scrub(r.reading || ""),
+    practice: scrub(r.practice || ""),
+    question: scrub(r.question || ""),
     limerence: focus.limerence,
   };
 }
@@ -152,6 +153,7 @@ export async function writeStoic(env, ctx, dateIso) {
     "- Quote the English only from a public-domain translation published before 1929 (for example George Long, Hastings Crossley, W. A. Oldfather, Richard M. Gummere, John W. Basore, Walter Miller, C. D. Yonge, R. D. Hicks, A. C. Pearson, G. H. Rendall, C. R. Haines) and name the translator and year.",
     "- If no public-domain translation exists, translate it yourself from the Greek or Latin and set translator to \"Translated for Dalton Daily\".",
     "- The passage itself: 40 to 180 words. Keep the translation's wording exactly; you may trim with an ellipsis.",
+    "- Plain text only inside the JSON: no citation markup, no <cite> tags, no HTML. Never refer to yourself or your searches.",
     "- Return ONLY JSON wrapped in <json></json>.",
   ].join("\n");
   const prompt = [
@@ -174,15 +176,15 @@ export async function writeStoic(env, ctx, dateIso) {
   });
   const r = extractJson(text);
   return {
-    author: String(r.author || ""),
-    work: String(r.work || ""),
-    citation: String(r.citation || ""),
-    translator: String(r.translator || ""),
+    author: scrub(r.author || ""),
+    work: scrub(r.work || ""),
+    citation: scrub(r.citation || ""),
+    translator: scrub(r.translator || ""),
     url: /^https:\/\//.test(r.url || "") ? r.url : "",
-    passage: String(r.passage || ""),
-    context: String(r.context || ""),
-    reflection: String(r.reflection || ""),
-    practice: String(r.practice || ""),
+    passage: scrub(r.passage || ""),
+    context: scrub(r.context || ""),
+    reflection: scrub(r.reflection || ""),
+    practice: scrub(r.practice || ""),
     obscure: focus.obscure,
   };
 }
