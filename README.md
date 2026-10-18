@@ -18,8 +18,9 @@ A private, one-reader morning newspaper. Standalone project: its own Worker, D1 
 
 | Path | What |
 |---|---|
-| `/` | Latest edition |
-| `/YYYY-MM-DD` | A past edition |
+| `/` | Front page: lead stories, In Pictures, Reflections, and a sampler from every desk |
+| `/world`, `/business`, `/technology`, `/law`, `/memphis`, `/ideas`, `/culture`, `/sports`, `/travel`, `/reflections`, `/comics` | Each desk on its own page |
+| `/YYYY-MM-DD` and `/YYYY-MM-DD/<page>` | A past edition |
 | `/archive` | All editions |
 | `/admin/run` | Print today's edition now (`?date=YYYY-MM-DD` for another day) |
 | `/admin/status` | Last 15 runs, story counts, searches, errors |

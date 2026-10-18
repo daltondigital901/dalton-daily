@@ -4,15 +4,15 @@
 // `lookback`: days of past headlines to avoid repeating (default 3; longer for evergreen beats).
 
 export const DESKS = [
-  { key: "world", name: "The World" },
-  { key: "money", name: "Business & Markets" },
-  { key: "science", name: "Technology & Science" },
-  { key: "law", name: "Law & Courts" },
-  { key: "local", name: "Memphis" },
-  { key: "ideas", name: "Ideas" },
-  { key: "culture", name: "Arts & Culture" },
-  { key: "sports", name: "Sports" },
-  { key: "travel", name: "Travel" },
+  { key: "world", slug: "world", name: "The World" },
+  { key: "money", slug: "business", name: "Business & Markets" },
+  { key: "science", slug: "technology", name: "Technology & Science" },
+  { key: "law", slug: "law", name: "Law & Courts" },
+  { key: "local", slug: "memphis", name: "Memphis" },
+  { key: "ideas", slug: "ideas", name: "Ideas" },
+  { key: "culture", slug: "culture", name: "Arts & Culture" },
+  { key: "sports", slug: "sports", name: "Sports" },
+  { key: "travel", slug: "travel", name: "Travel" },
 ];
 
 export const SECTIONS = [
@@ -69,6 +69,10 @@ export const SECTIONS = [
     brief: "Memphis city government, the mayor and city council, Shelby County Commission and mayor, Memphis-Shelby County Schools board, local elections, policing and public-safety policy, MLGW, development and budget fights, and Tennessee state actions that hit Memphis. Prefer local outlets such as the Daily Memphian, Commercial Appeal, MLK50, Tennessee Lookout, WREG, Action News 5 and Local Memphis.",
   },
   {
+    key: "events", desk: "local", name: "Memphis Events", count: 4, local: true, lookback: 7,
+    brief: "Worth-going-to events in Memphis and nearby (Germantown, Collierville, Bartlett, Midtown, Downtown) over the next 7 days: concerts and recitals (the Memphis Symphony Orchestra, Germantown Performing Arts Centre, Iris Collective, Levitt Shell, Minglewood Hall, the Orpheum), theater, museum openings (Brooks, Dixon, Stax, NCRM), festivals, markets, talks, and notable sports dates. Lead each with the date, time and venue in the dek, and include the price or ticket link when known. Prefer event pages and venue calendars (primary), Memphis Travel, Choose901, the Memphis Flyer and the Daily Memphian.",
+  },
+  {
     key: "religion", desk: "ideas", name: "Religion & Philosophy", count: 3,
     brief: "News from religious institutions and communities worldwide, religion and law, notable books and debates in philosophy and ethics, and serious essays worth reading. Treat all traditions even-handedly.",
   },
@@ -85,8 +89,8 @@ export const SECTIONS = [
     brief: "New releases and how critics received them, box office results, festivals and awards, and significant industry news.",
   },
   {
-    key: "music", desk: "culture", name: "Music", count: 3,
-    brief: "Notable new albums and how they were received, tours, awards, and industry news. Include Memphis music news when there is any.",
+    key: "music", desk: "culture", name: "Music: Piano & Classical", count: 4,
+    brief: "Mostly piano: notable new piano recordings and how critics received them, major recitals and concerto performances, pianists in the news, competitions (the Van Cliburn, Chopin, Leeds, Queen Elisabeth, Busoni and others), repertoire discoveries and anniversaries. Then classical music broadly: orchestras, opera, conductors and premieres, including the Memphis Symphony Orchestra. Close with at most one story from music in general when it is genuinely significant. Use Gramophone, BBC Music Magazine, Bachtrack, Slipped Disc, Pianist magazine, The Strad, the Guardian and New York Times classical coverage, and label and competition pages.",
   },
   {
     key: "grappling", desk: "sports", name: "Jiu-Jitsu & Judo", count: 3, lookback: 5,

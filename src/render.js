@@ -124,6 +124,39 @@ figure.ph figcaption{font-family:"Libre Franklin",Arial,sans-serif;font-size:10.
 .strip .cap{font-size:14.5px;color:var(--muted);margin:0 0 6px}
 .strip .go{font-family:"Libre Franklin",Arial,sans-serif;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 
+/* Navigation state and inside-page turns */
+nav.index a.on{color:var(--ink);font-weight:700;border-bottom:2px solid var(--accent);padding-bottom:2px}
+.kicker a{text-decoration:none}
+a.plain{text-decoration:none;display:block}
+.more{font-family:"Libre Franklin",Arial,sans-serif;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);text-decoration:none}
+.turn{display:flex;justify-content:space-between;gap:16px;margin-top:40px;padding:12px 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);font-family:"Playfair Display",Georgia,serif;font-size:20px;font-weight:700}
+.turn a{text-decoration:none}
+.turn a:hover{color:var(--accent)}
+
+/* Home: reflections teaser */
+.reflect.teaser .verse{font-size:17px}
+.reflect.teaser h3 a{text-decoration:none}
+.reflect.teaser .clip{margin:0 0 8px;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+
+/* Home: inside today's paper */
+.inside{margin-top:34px}
+.samples{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 30px}
+.sample{padding:0 0 22px;margin-bottom:22px;border-bottom:1px solid var(--hair);display:flex;flex-direction:column}
+.samples .sample:nth-last-child(-n+3){border-bottom:0}
+.deskname{font-family:"Playfair Display",Georgia,serif;font-weight:900;font-size:21px;text-transform:uppercase;letter-spacing:.06em;border-top:3px solid var(--rule);padding-top:8px;margin-bottom:12px}
+.deskname a{text-decoration:none}
+.sample h4{font-size:21px;line-height:1.18}
+.sample .dek{font-size:15.5px}
+.sample ul{list-style:none;padding:0;margin:4px 0 12px;flex:1}
+.sample li{font-family:"Playfair Display",Georgia,serif;font-size:16.5px;line-height:1.25;padding:8px 0;border-top:1px solid var(--hair)}
+.sample li a{text-decoration:none}
+.sample li a:hover{text-decoration:underline}
+.funnies-teaser p{text-align:center;font-family:"Libre Franklin",Arial,sans-serif;font-size:13px;letter-spacing:.04em}
+.funnies-teaser a{text-decoration:none}
+.funnies-teaser span{font-weight:700;text-transform:uppercase;letter-spacing:.1em;font-size:11.5px}
+@media (max-width:1000px){.samples{grid-template-columns:repeat(2,minmax(0,1fr))}.samples .sample:nth-last-child(-n+3){border-bottom:1px solid var(--hair)}}
+@media (max-width:700px){.samples{grid-template-columns:1fr}.samples .sample:nth-last-child(-n+3){border-bottom:1px solid var(--hair)}.samples .sample:last-child{border-bottom:0}.turn{font-size:17px}}
+
 footer{margin-top:48px;border-top:4px double var(--rule);padding-top:10px;font-family:"Libre Franklin",Arial,sans-serif;font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:8px 18px;justify-content:space-between}
 .notice{background:var(--card);border:1px solid var(--hair);padding:10px 14px;margin-top:14px;font-size:15px}
 .archive{list-style:none;padding:0;column-count:3;column-gap:30px}
@@ -182,24 +215,31 @@ function shell(title, inner) {
 <body><div class="page">${inner}</div>${SCRIPT}</body></html>`;
 }
 
-function masthead(ed) {
+// Page links: base is "" for today's paper or "/YYYY-MM-DD" for an archived edition.
+const DESK_BY_KEY = Object.fromEntries(DESKS.map((d) => [d.key, d]));
+export const PAGES = [...DESKS.map((d) => d.slug), "reflections", "comics"];
+const deskOf = (s) => DESK_BY_KEY[SECTION_BY_KEY[s.section]?.desk];
+const storyHref = (s, base) => `${base}/${deskOf(s)?.slug || ""}#s-${s.id}`;
+
+function masthead(ed, base = "", active = "") {
   const w = ed?.weather;
   const weather = w
     ? `<b>Memphis Weather</b>${esc(w.sky)}. High ${w.high}°, low ${w.low}°.<br>Chance of rain ${w.rain}%.`
     : `<b>Memphis Weather</b>Forecast unavailable.`;
+  const link = (href, name, key) => `<a href="${href}"${active === key ? ' class="on" aria-current="page"' : ""}>${esc(name)}</a>`;
   return `
 <header>
   <div class="mast">
     <div class="ear">${weather}</div>
-    <div><h1 class="title"><a href="/">Dalton Daily</a></h1><div class="motto">All the news fit for one reader</div></div>
+    <div><h1 class="title"><a href="${base || "/"}">Dalton Daily</a></h1><div class="motto">All the news fit for one reader</div></div>
     <div class="ear right"><b>Vol. I &middot; No. ${ed?.number || 1}</b>Private edition<br>Printed for the publisher</div>
   </div>
   <div class="dateline"><span>${esc(ed?.longDate || "")}</span><span>Memphis, Tennessee</span><span>Est. 2026</span></div>
   <nav class="index">
-    <a href="#front">Front Page</a>
-    <a href="#reflections">Reflections</a>
-    ${DESKS.map((d) => `<a href="#desk-${d.key}">${esc(d.name)}</a>`).join("")}
-    <a href="#comics">Comics</a>
+    ${link(base || "/", "Front Page", "home")}
+    ${DESKS.map((d) => link(`${base}/${d.slug}`, d.name, d.slug)).join("")}
+    ${link(`${base}/reflections`, "Reflections", "reflections")}
+    ${link(`${base}/comics`, "Comics", "comics")}
   </nav>
 </header>`;
 }
@@ -267,7 +307,7 @@ function storiesById(ed) {
   return Object.fromEntries(Object.values(ed.sections).flat().map((s) => [s.id, s]));
 }
 
-function frontPage(ed) {
+function frontPage(ed, base) {
   const byId = storiesById(ed);
   const picks = (ed.front || []).map((id) => byId[id]).filter(Boolean);
   if (!picks.length) return "";
@@ -276,9 +316,9 @@ function frontPage(ed) {
 <section class="front" id="front">
   <div class="lead">
     ${photo(lead, "wide")}
-    <div class="kicker">${esc(label(lead))}</div>
+    <div class="kicker"><a href="${base}/${deskOf(lead)?.slug}">${esc(label(lead))}</a></div>
     <h2>${head(lead)}</h2>
-    ${lead.dek ? `<p class="dek">${esc(lead.dek)}</p>` : ""}
+    ${dek(lead)}
     <div class="body">${paragraphs(lead.body, lead.dateline)}</div>
     ${why(lead)}
     ${sourcesLine(lead)}
@@ -287,27 +327,27 @@ function frontPage(ed) {
     ${rest
       .map(
         (s, i) => `<div class="brief">${i === 0 ? photo(s) : ""}<div class="kicker">${esc(label(s))}</div>
-      <h3><a href="#s-${esc(s.id)}">${esc(s.headline)}</a></h3>${dek(s)}</div>`
+      <h3><a href="${storyHref(s, base)}">${esc(s.headline)}</a></h3>${dek(s)}</div>`
       )
       .join("")}
   </div>
 </section>`;
 }
 
-function inPictures(ed) {
+function inPictures(ed, base) {
   const byId = storiesById(ed);
   const picks = (ed.pictures || []).map((id) => byId[id]).filter(Boolean);
   if (picks.length < 2) return "";
   const shown = picks.slice(0, picks.length >= 4 ? 4 : 2);
   return `<section class="pics"><div class="band">In Pictures</div><div class="row">
-    ${shown.map((s) => `<div>${photo(s)}<div class="kicker">${esc(label(s))}</div><h4><a href="#s-${esc(s.id)}">${esc(s.headline)}</a></h4></div>`).join("")}
+    ${shown.map((s) => `<div><a href="${storyHref(s, base)}" class="plain">${photo(s)}</a><div class="kicker">${esc(label(s))}</div><h4><a href="${storyHref(s, base)}">${esc(s.headline)}</a></h4></div>`).join("")}
   </div></section>`;
 }
 
 function reflections(ed) {
   const sc = ed.devotions?.scripture;
   const sl = ed.devotions?.slaa;
-  if (!sc && !sl) return "";
+  if (!sc && !sl) return `<p class="missing">The reflections were not filed this morning.</p>`;
   const scripture = sc
     ? `<div><div class="kicker">Daily Scripture</div>
       <h3>${esc(sc.theme || sc.reference)}</h3>
@@ -326,21 +366,64 @@ function reflections(ed) {
   return `<section class="reflect" id="reflections">${scripture}${slaa}</section>`;
 }
 
-function desks(ed) {
-  const leadId = (ed.front || [])[0]; // the lead story is already printed in full on the front page
-  return DESKS.map((d) => {
-    const inner = SECTIONS.filter((s) => s.desk === d.key)
-      .map((sec) => {
-        const stories = (ed.sections[sec.key] || []).filter((s) => s.id !== leadId);
-        if (!stories.length) {
-          if (sec.optional && !ed.errors?.[sec.key]) return "";
-          return `<section class="sec" id="sec-${sec.key}"><h3>${esc(sec.name)}</h3><p class="missing">${ed.errors?.[sec.key] ? "This section could not be filed this morning." : "No stories this morning."}</p></section>`;
-        }
-        return `<section class="sec" id="sec-${sec.key}"><h3>${esc(sec.name)}</h3>${sectionGrid(stories)}</section>`;
-      })
-      .join("");
-    return inner ? `<section class="desk" id="desk-${d.key}"><h2>${esc(d.name)}</h2>${inner}</section>` : "";
+// Home-page version of the reflections: the verse and the reading's title, linking to the full page.
+function reflectionsTeaser(ed, base) {
+  const sc = ed.devotions?.scripture;
+  const sl = ed.devotions?.slaa;
+  if (!sc && !sl) return "";
+  const firstPara = (t = "") => t.split(/\n{2,}|\n/)[0] || "";
+  return `<section class="reflect teaser">
+    <div><div class="kicker">Daily Scripture</div>${sc ? `<h3><a href="${base}/reflections">${esc(sc.theme || sc.reference)}</a></h3>
+      <div class="ref">${esc(sc.reference)}</div>
+      ${sc.verses.length ? `<p class="verse">${sc.verses.slice(0, 3).map((v) => `<sup>${v.n}</sup>${esc(v.text)}`).join(" ")}${sc.verses.length > 3 ? " &hellip;" : ""}</p>` : ""}` : `<p class="missing">Not available.</p>`}</div>
+    <div><div class="kicker">Daily SLAA Reading</div>${sl ? `<h3><a href="${base}/reflections">${esc(sl.title)}</a></h3>
+      <div class="ref">From ${esc(sl.source)}</div>
+      <p class="clip">${esc(firstPara(sl.reading))}</p><a class="more" href="${base}/reflections">Continue reading &rarr;</a>` : `<p class="missing">Not available.</p>`}</div>
+  </section>`;
+}
+
+// "Inside today's paper": one block per desk, three across — the desk's best story with its photo,
+// then two more headlines. Nine desks make a full 3 x 3 grid.
+function sampler(ed, base) {
+  const onFront = new Set([...(ed.front || []), ...(ed.pictures || [])]);
+  const blocks = DESKS.map((d) => {
+    const stories = SECTIONS.filter((s) => s.desk === d.key).flatMap((sec) => ed.sections[sec.key] || []);
+    if (!stories.length) return "";
+    const fresh = stories.filter((s) => !onFront.has(s.id));
+    const pool = (fresh.length >= 3 ? fresh : stories).slice().sort((a, b) => b.importance - a.importance);
+    const top = pool.find((s) => s.image) || pool[0];
+    const more = pool.filter((s) => s !== top).slice(0, 2);
+    return `<div class="sample">
+      <h3 class="deskname"><a href="${base}/${d.slug}">${esc(d.name)}</a></h3>
+      <a href="${storyHref(top, base)}" class="plain">${photo(top)}</a>
+      <div class="kicker">${esc(label(top))}</div>
+      <h4><a href="${storyHref(top, base)}">${esc(top.headline)}</a></h4>${dek(top)}
+      <ul>${more.map((s) => `<li><a href="${storyHref(s, base)}">${esc(s.headline)}</a></li>`).join("")}</ul>
+      <a class="more" href="${base}/${d.slug}">All of ${esc(d.name)} &rarr;</a>
+    </div>`;
   }).join("");
+  return `<section class="inside"><div class="band">Inside Today's Paper</div><div class="samples">${blocks}</div></section>`;
+}
+
+function comicsTeaser(ed, base) {
+  const strips = (ed.comics || []).filter((c) => c.images?.length);
+  if (!strips.length) return "";
+  return `<section class="funnies-teaser"><div class="band">The Funnies</div>
+    <p><a href="${base}/comics">${strips.map((c) => `<span>${esc(c.strip)}</span> <i>&ldquo;${esc(c.title)}&rdquo;</i>`).join(" &middot; ")} &rarr;</a></p></section>`;
+}
+
+function deskPage(ed, desk) {
+  const inner = SECTIONS.filter((s) => s.desk === desk.key)
+    .map((sec) => {
+      const stories = ed.sections[sec.key] || [];
+      if (!stories.length) {
+        if (sec.optional && !ed.errors?.[sec.key]) return "";
+        return `<section class="sec" id="sec-${sec.key}"><h3>${esc(sec.name)}</h3><p class="missing">${ed.errors?.[sec.key] ? "This section could not be filed this morning." : "No stories this morning."}</p></section>`;
+      }
+      return `<section class="sec" id="sec-${sec.key}"><h3>${esc(sec.name)}</h3>${sectionGrid(stories)}</section>`;
+    })
+    .join("");
+  return `<section class="desk"><h2>${esc(desk.name)}</h2>${inner || '<p class="missing">Nothing filed on this desk this morning.</p>'}</section>`;
 }
 
 function comicsPage(ed) {
@@ -354,24 +437,43 @@ function comicsPage(ed) {
       <a class="go" href="${esc(c.link)}" target="_blank" rel="noopener">View at source &rarr;</a></div>`;
     })
     .join("");
-  return strips ? `<section class="desk" id="comics"><h2>The Funnies</h2><div class="comics">${strips}</div></section>` : "";
+  return `<section class="desk"><h2>The Funnies</h2>${strips ? `<div class="comics">${strips}</div>` : '<p class="missing">No comics this morning.</p>'}</section>`;
 }
 
-export function renderEdition(ed, { notice } = {}) {
+// "Next page" link at the foot of every inside page, so the paper reads front to back.
+function turnPage(page, base) {
+  const order = PAGES;
+  const i = order.indexOf(page);
+  const next = order[(i + 1) % order.length];
+  const name = (slug) => DESKS.find((d) => d.slug === slug)?.name || (slug === "reflections" ? "Reflections" : "Comics");
+  const prev = i > 0 ? order[i - 1] : null;
+  return `<nav class="turn">${prev ? `<a href="${base}/${prev}">&larr; ${esc(name(prev))}</a>` : `<a href="${base || "/"}">&larr; Front Page</a>`}
+    <a href="${i === order.length - 1 ? base || "/" : `${base}/${next}`}">${i === order.length - 1 ? "Front Page" : esc(name(next))} &rarr;</a></nav>`;
+}
+
+export function renderEdition(ed, { notice, page = "home", base = "" } = {}) {
   const failed = Object.keys(ed.errors || {});
+  const desk = DESKS.find((d) => d.slug === page);
+  let body;
+  if (page === "home") {
+    body = `${frontPage(ed, base)}${inPictures(ed, base)}${reflectionsTeaser(ed, base)}${sampler(ed, base)}${comicsTeaser(ed, base)}`;
+  } else if (desk) {
+    body = deskPage(ed, desk) + turnPage(page, base);
+  } else if (page === "reflections") {
+    body = `<section class="desk"><h2>Reflections</h2>${reflections(ed)}</section>` + turnPage(page, base);
+  } else {
+    body = comicsPage(ed) + turnPage(page, base);
+  }
+  const pageName = desk?.name || (page === "reflections" ? "Reflections" : page === "comics" ? "Comics" : "");
   const inner = `
-${masthead(ed)}
+${masthead(ed, base, page)}
 ${notice ? `<div class="notice">${notice}</div>` : ""}
-${frontPage(ed)}
-${inPictures(ed)}
-${reflections(ed)}
-${desks(ed)}
-${comicsPage(ed)}
+${body}
 <footer>
   <span><a href="/archive">Archive</a> &middot; <a href="/admin/status">Press room</a></span>
   <span>Filed ${esc(new Date(ed.generatedAt).toLocaleString("en-US", { timeZone: "America/Chicago", dateStyle: "medium", timeStyle: "short" }))} CT &middot; ${ed.searches || 0} searches${failed.length ? ` &middot; missing: ${esc(failed.join(", "))}` : ""}</span>
 </footer>`;
-  return shell(`Dalton Daily — ${ed.longDate}`, inner);
+  return shell(`Dalton Daily${pageName ? ` — ${pageName}` : ""} — ${ed.longDate}`, inner);
 }
 
 export function renderArchive(rows) {

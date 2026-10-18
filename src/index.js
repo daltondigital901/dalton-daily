@@ -1,4 +1,4 @@
-import { renderEdition, renderArchive, renderMessage } from "./render.js";
+import { renderEdition, renderArchive, renderMessage, PAGES } from "./render.js";
 import { SECTIONS } from "./sections.js";
 
 export { EditionWorkflow } from "./workflow.js";
@@ -76,19 +76,18 @@ export default {
       return html(renderArchive(rows.results));
     }
 
-    const m = url.pathname.match(/^\/(\d{4}-\d{2}-\d{2})\/?$/);
-    if (m) {
-      const ed = await latestEdition(env, m[1]);
-      return ed ? html(renderEdition(ed)) : html(renderMessage("Not found", `No edition for ${m[1]}. <a href="/archive">Archive</a>`), 404);
-    }
-
-    if (url.pathname === "/") {
-      const ed = await latestEdition(env);
+    // Pages: /, /<page>, /<date>, /<date>/<page>
+    const m = url.pathname.match(/^\/(?:(\d{4}-\d{2}-\d{2})\/?)?([a-z-]*)\/?$/);
+    if (m && (!m[2] || PAGES.includes(m[2]))) {
+      const [, date, page] = m;
+      const ed = await latestEdition(env, date);
       if (!ed) {
-        return html(renderMessage("First edition", `No edition has been printed yet. <a href="/admin/run">Print the first edition now</a>.`));
+        return date
+          ? html(renderMessage("Not found", `No edition for ${date}. <a href="/archive">Archive</a>`), 404)
+          : html(renderMessage("First edition", `No edition has been printed yet. <a href="/admin/run">Print the first edition now</a>.`));
       }
-      const notice = ed.date !== today ? `This is the ${ed.longDate} edition. Today's paper is not out yet.` : "";
-      return html(renderEdition(ed, { notice }));
+      const notice = !date && ed.date !== today ? `This is the ${ed.longDate} edition. Today's paper is not out yet.` : "";
+      return html(renderEdition(ed, { notice, page: page || "home", base: date ? `/${date}` : "" }));
     }
 
     return new Response("Not found", { status: 404 });
