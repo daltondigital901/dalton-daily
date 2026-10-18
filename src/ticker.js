@@ -29,7 +29,7 @@ async function yahoo([symbol, name, kind]) {
   return { name, price, change: ((price - prev) / prev) * 100, kind: kind || "index" };
 }
 
-async function build() {
+export async function build() {
   const settled = await Promise.allSettled([...MARKETS, ...COINS].map(yahoo));
   const quotes = [];
   for (const s of settled) {

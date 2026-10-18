@@ -3,6 +3,7 @@ name: Deploy Dalton Daily
 on:
   push:
     branches: [main]
+    paths-ignore: ["print/**", "scripts/**", ".github/workflows/print.yml"]
   workflow_dispatch:
 
 concurrency:

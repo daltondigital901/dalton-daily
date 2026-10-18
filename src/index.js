@@ -2,7 +2,8 @@ import { renderEdition, renderArchive, renderMessage, PAGES, SITE } from "./rend
 import { INDEXNOW_KEY } from "./indexnow.js";
 import { SECTIONS } from "./sections.js";
 import { ICONS } from "./icons.js";
-import { ticker } from "./ticker.js";
+import { ticker, build as buildQuotes } from "./ticker.js";
+import { renderPrint } from "./print.js";
 
 function b64(b) {
   const bin = atob(b);
@@ -59,8 +60,15 @@ export default {
     const { date: today } = localParts(env.TIMEZONE || "America/Chicago");
 
     if (url.pathname === "/api/ticker") return ticker(ctx);
+    const pm = url.pathname.match(/^\/print(?:\/(\d{4}-\d{2}-\d{2}))?\/?$/);
+    if (pm) {
+      const ed = await latestEdition(env, pm[1]);
+      if (!ed) return new Response("No edition", { status: 404 });
+      const q = await buildQuotes().catch(() => ({ quotes: [] }));
+      return new Response(renderPrint(ed, q.quotes), { headers: { "content-type": "text/html; charset=utf-8", "x-robots-tag": "noindex" } });
+    }
     if (url.pathname === "/robots.txt") {
-      return new Response(`User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /api/\n\nSitemap: ${SITE}/sitemap.xml\n`, { headers: { "content-type": "text/plain" } });
+      return new Response(`User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /api/\nDisallow: /print\n\nSitemap: ${SITE}/sitemap.xml\n`, { headers: { "content-type": "text/plain" } });
     }
     if (url.pathname === `/${INDEXNOW_KEY}.txt`) return new Response(INDEXNOW_KEY, { headers: { "content-type": "text/plain" } });
     if (url.pathname === "/og.jpg") {
