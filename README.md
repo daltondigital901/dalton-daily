@@ -12,7 +12,7 @@ A private, one-reader morning newspaper. Standalone project: its own Worker, D1 
 - Story photos: each story's lead image is the og:image its publisher sets for sharing, taken from the first source that has one; site-wide default images are dropped.
 - Reflections: a daily scripture (passage chosen by Claude, verse text from bible-api.com, World English Bible), a daily Stoic reading (major Stoics alternating with lesser-known figures and fragments, from public-domain translations or translated fresh), and the Commonplace Book, a short checked essay rotating through philosophy, theology, metaphysics, history, science, literature and entrepreneurship.
 - Photos: every story gets one; the publisher's share image first, otherwise a Wikipedia or Wikimedia Commons photo of the story's subject.
-- Market ticker under the menu: indices, yields, commodities, currencies and crypto (Yahoo Finance chart API and CoinGecko, cached 5 minutes at /api/ticker).
+- Market ticker under the menu: indices, yields, commodities, currencies and crypto (Yahoo Finance chart API, cached 5 minutes at /api/ticker).
 - Memphis weather from Open-Meteo.
 - Stories from the last 3 days are fed back in so editions don't repeat; ▲/▼ votes are fed back per section to steer coverage.
 
