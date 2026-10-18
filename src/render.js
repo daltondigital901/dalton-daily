@@ -157,6 +157,62 @@ a.plain{text-decoration:none;display:block}
 @media (max-width:1000px){.samples{grid-template-columns:repeat(2,minmax(0,1fr))}.samples .sample:nth-last-child(-n+3){border-bottom:1px solid var(--hair)}}
 @media (max-width:700px){.samples{grid-template-columns:1fr}.samples .sample:nth-last-child(-n+3){border-bottom:1px solid var(--hair)}.samples .sample:last-child{border-bottom:0}.turn{font-size:17px}}
 
+/* Three reflections */
+.reflect.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+blockquote.stoic{margin:0 0 6px;padding:0 0 0 14px;border-left:3px solid var(--rule);font-size:18px;line-height:1.55;font-style:italic}
+blockquote.stoic p{margin:0 0 8px;text-align:left}
+.reflect .tr{font-family:"Libre Franklin",Arial,sans-serif;font-size:11px;letter-spacing:.06em;color:var(--muted);margin:0 0 10px}
+.reflect .ctx{font-size:15px;color:var(--muted);margin:0 0 10px;font-style:italic}
+@media (max-width:1000px){.reflect.three{grid-template-columns:1fr}.reflect.three>div+div{border-left:0;border-top:1px solid var(--hair)}}
+
+/* ---------- Phone layout ---------- */
+.mobile-weather{display:none}
+@media (max-width:700px){.desktop-only{display:none}}
+@media (max-width:700px){
+ body{font-size:17px;line-height:1.55}
+ .page{padding:10px 14px 48px}
+ .mast{padding-bottom:6px}
+ .title{font-size:clamp(44px,14vw,62px)}
+ .motto{font-size:12.5px;margin-top:2px}
+ .dateline{justify-content:space-between;font-size:10.5px;letter-spacing:.1em;padding:6px 0}
+ .dateline span:nth-child(3){display:none}
+ .mobile-weather{display:inline}
+ /* One-row, swipeable section bar that stays on screen */
+ nav.index{position:sticky;top:0;z-index:20;background:var(--paper);flex-wrap:nowrap;justify-content:flex-start;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;gap:0;margin:0 -14px;padding:0 6px;border-bottom:1px solid var(--rule);box-shadow:0 6px 10px -10px rgba(0,0,0,.35)}
+ nav.index::-webkit-scrollbar{display:none}
+ nav.index a{flex:0 0 auto;padding:12px 10px;font-size:11.5px;white-space:nowrap}
+ nav.index a.on{border-bottom:0;box-shadow:inset 0 -3px 0 var(--accent);padding-bottom:12px}
+ /* Readable text: no justified rivers on a narrow column */
+ .body p,.lead .body p{text-align:left;hyphens:manual}
+ .lead h2{font-size:32px;line-height:1.08}
+ .lead .dek{font-size:18px}
+ .lead .body p:first-child:not(:has(.dl))::first-letter{font-size:52px}
+ .feat h4,.feat.cell h4{font-size:25px}
+ .story h4,.cell h4{font-size:22px}
+ .side h3,.side .brief:first-child h3{font-size:21px}
+ .front{margin-top:12px}
+ figure.ph{margin:0 -14px 12px}
+ figure.ph figcaption{padding:0 14px}
+ .pics figure.ph,.sample figure.ph,.side figure.ph{margin:0 0 10px}
+ .pics .row{grid-template-columns:1fr 1fr;gap:16px}
+ .pics h4{font-size:16.5px}
+ .reflect,.reflect.three{margin-left:-14px;margin-right:-14px}
+ .reflect>div{padding:18px 16px}
+ .reflect.teaser .clip{-webkit-line-clamp:3}
+ .desk{margin-top:22px}
+ .desk>h2{font-size:23px}
+ .sec{margin-top:18px}
+ /* Bigger tap targets */
+ .src{font-size:12.5px;gap:6px 10px;line-height:1.6}
+ .vote button{font-size:14px;padding:4px 14px;min-height:34px}
+ .more{display:inline-block;padding:8px 0}
+ .sample li{font-size:17.5px;padding:10px 0}
+ .turn{font-size:16px;padding:14px 0}
+ .turn a{padding:6px 0}
+ footer{flex-direction:column;gap:6px}
+ .strip img{margin-left:-14px;margin-right:-14px;max-width:calc(100% + 28px)}
+}
+
 footer{margin-top:48px;border-top:4px double var(--rule);padding-top:10px;font-family:"Libre Franklin",Arial,sans-serif;font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:8px 18px;justify-content:space-between}
 .notice{background:var(--card);border:1px solid var(--hair);padding:10px 14px;margin-top:14px;font-size:15px}
 .archive{list-style:none;padding:0;column-count:3;column-gap:30px}
@@ -186,6 +242,7 @@ const FONTS =
 const SCRIPT = `
 <script>
 (function(){
+  var on=document.querySelector('nav.index a.on');if(on&&on.scrollIntoView){try{on.parentNode.scrollLeft=on.offsetLeft-(on.parentNode.clientWidth-on.offsetWidth)/2}catch(e){}}
   var store={};try{store=JSON.parse(localStorage.getItem('dd_votes')||'{}')}catch(e){}
   document.querySelectorAll('.vote').forEach(function(v){
     var id=v.dataset.id;
@@ -211,7 +268,7 @@ const SCRIPT = `
 
 function shell(title, inner) {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(title)}</title><meta name="robots" content="noindex,nofollow">${FONTS}<style>${CSS}</style></head>
+<title>${esc(title)}</title><meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#f6f2e8" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#181714" media="(prefers-color-scheme: dark)"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Dalton Daily"><meta name="format-detection" content="telephone=no">${FONTS}<style>${CSS}</style></head>
 <body><div class="page">${inner}</div>${SCRIPT}</body></html>`;
 }
 
@@ -234,14 +291,14 @@ function masthead(ed, base = "", active = "") {
     <div><h1 class="title"><a href="${base || "/"}">Dalton Daily</a></h1><div class="motto">All the news fit for one reader</div></div>
     <div class="ear right"><b>Vol. I &middot; No. ${ed?.number || 1}</b>Private edition<br>Printed for the publisher</div>
   </div>
-  <div class="dateline"><span>${esc(ed?.longDate || "")}</span><span>Memphis, Tennessee</span><span>Est. 2026</span></div>
+  <div class="dateline"><span>${esc(ed?.longDate || "")}</span><span>Memphis${w ? `<span class="mobile-weather"> &middot; ${w.high}°/${w.low}°</span>` : ""}<span class="desktop-only">, Tennessee</span></span><span>Est. 2026</span></div>
+</header>
   <nav class="index">
     ${link(base || "/", "Front Page", "home")}
     ${DESKS.map((d) => link(`${base}/${d.slug}`, d.name, d.slug)).join("")}
     ${link(`${base}/reflections`, "Reflections", "reflections")}
     ${link(`${base}/comics`, "Comics", "comics")}
-  </nav>
-</header>`;
+  </nav>`;
 }
 
 function paragraphs(body = "", dateline) {
@@ -347,7 +404,7 @@ function inPictures(ed, base) {
 function reflections(ed) {
   const sc = ed.devotions?.scripture;
   const sl = ed.devotions?.slaa;
-  if (!sc && !sl) return `<p class="missing">The reflections were not filed this morning.</p>`;
+  if (!sc && !sl && !ed.devotions?.stoic) return `<p class="missing">The reflections were not filed this morning.</p>`;
   const scripture = sc
     ? `<div><div class="kicker">Daily Scripture</div>
       <h3>${esc(sc.theme || sc.reference)}</h3>
@@ -363,19 +420,34 @@ function reflections(ed) {
       ${sl.practice ? `<p class="note"><b>Today</b>${esc(sl.practice)}</p>` : ""}
       ${sl.question ? `<p class="note"><b>Reflect</b>${esc(sl.question)}</p>` : ""}</div>`
     : `<div><div class="kicker">Daily SLAA Reading</div><p class="missing">Not available this morning.</p></div>`;
-  return `<section class="reflect" id="reflections">${scripture}${slaa}</section>`;
+  const st = ed.devotions?.stoic;
+  const stoic = st
+    ? `<div><div class="kicker">Daily Stoic${st.obscure ? " &middot; From the Margins" : ""}</div>
+      <h3>${esc(st.author)}</h3>
+      <div class="ref">${st.url ? `<a href="${esc(st.url)}" target="_blank" rel="noopener">${esc(st.work)}, ${esc(st.citation)}</a>` : `${esc(st.work)}, ${esc(st.citation)}`}</div>
+      <blockquote class="stoic">${paragraphs(st.passage)}</blockquote>
+      <p class="tr">${esc(st.translator)}</p>
+      ${st.context ? `<p class="ctx">${esc(st.context)}</p>` : ""}
+      <div class="body">${paragraphs(st.reflection)}</div>
+      ${st.practice ? `<p class="note"><b>Practice</b>${esc(st.practice)}</p>` : ""}</div>`
+    : `<div><div class="kicker">Daily Stoic</div><p class="missing">Not available this morning.</p></div>`;
+  return `<section class="reflect three" id="reflections">${scripture}${stoic}${slaa}</section>`;
 }
 
 // Home-page version of the reflections: the verse and the reading's title, linking to the full page.
 function reflectionsTeaser(ed, base) {
   const sc = ed.devotions?.scripture;
   const sl = ed.devotions?.slaa;
-  if (!sc && !sl) return "";
+  const st = ed.devotions?.stoic;
+  if (!sc && !sl && !st) return "";
   const firstPara = (t = "") => t.split(/\n{2,}|\n/)[0] || "";
-  return `<section class="reflect teaser">
+  return `<section class="reflect three teaser">
     <div><div class="kicker">Daily Scripture</div>${sc ? `<h3><a href="${base}/reflections">${esc(sc.theme || sc.reference)}</a></h3>
       <div class="ref">${esc(sc.reference)}</div>
       ${sc.verses.length ? `<p class="verse">${sc.verses.slice(0, 3).map((v) => `<sup>${v.n}</sup>${esc(v.text)}`).join(" ")}${sc.verses.length > 3 ? " &hellip;" : ""}</p>` : ""}` : `<p class="missing">Not available.</p>`}</div>
+    <div><div class="kicker">Daily Stoic</div>${st ? `<h3><a href="${base}/reflections">${esc(st.author)}</a></h3>
+      <div class="ref">${esc(st.work)}, ${esc(st.citation)}</div>
+      <p class="clip verse">${esc(firstPara(st.passage))}</p><a class="more" href="${base}/reflections">Continue reading &rarr;</a>` : `<p class="missing">Not available.</p>`}</div>
     <div><div class="kicker">Daily SLAA Reading</div>${sl ? `<h3><a href="${base}/reflections">${esc(sl.title)}</a></h3>
       <div class="ref">From ${esc(sl.source)}</div>
       <p class="clip">${esc(firstPara(sl.reading))}</p><a class="more" href="${base}/reflections">Continue reading &rarr;</a>` : `<p class="missing">Not available.</p>`}</div>

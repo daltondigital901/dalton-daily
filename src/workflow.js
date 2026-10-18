@@ -4,7 +4,7 @@ import { WorkflowEntrypoint } from "cloudflare:workers";
 import { SECTIONS } from "./sections.js";
 import { reportSection } from "./claude.js";
 import { fetchComics, fetchWeather } from "./comics.js";
-import { writeScripture, writeSlaaReading } from "./devotions.js";
+import { writeScripture, writeSlaaReading, writeStoic } from "./devotions.js";
 import { findImages } from "./images.js";
 
 const BATCH = 6; // sections reported in parallel
@@ -48,13 +48,14 @@ export class EditionWorkflow extends WorkflowEntrypoint {
         if (list.length < 12) list.push(r.headline);
       }
       const dev = await env.DB.prepare(
-        "SELECT kind, ref FROM devotions WHERE date >= date(?, '-90 days') AND date < ? ORDER BY date DESC"
+        "SELECT kind, ref FROM devotions WHERE date >= date(?, '-365 days') AND date < ? ORDER BY date DESC"
       ).bind(date, date).all();
-      const recentScripture = dev.results.filter((r) => r.kind === "scripture").map((r) => r.ref).slice(0, 60);
+      const recentScripture = dev.results.filter((r) => r.kind === "scripture").map((r) => r.ref).slice(0, 90);
       const recentSlaa = dev.results.filter((r) => r.kind === "slaa").map((r) => r.ref).slice(0, 14);
+      const recentStoic = dev.results.filter((r) => r.kind === "stoic").map((r) => r.ref).slice(0, 120);
       const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM editions WHERE status = 'complete' AND date < ?").bind(date).first();
       await env.DB.prepare("INSERT INTO runs (date, started_at, status) VALUES (?, datetime('now'), 'running')").bind(date).run();
-      return { recentHeadlines, liked, disliked, recentScripture, recentSlaa, longDate: longDate(date), number: (n?.n || 0) + 1 };
+      return { recentHeadlines, liked, disliked, recentScripture, recentSlaa, recentStoic, longDate: longDate(date), number: (n?.n || 0) + 1 };
     });
 
     const sections = {};
@@ -87,9 +88,10 @@ export class EditionWorkflow extends WorkflowEntrypoint {
     ).catch(() => ({}));
 
     const retry = { retries: { limit: 2, delay: "20 seconds", backoff: "exponential" }, timeout: "5 minutes" };
-    const [scripture, slaa] = await Promise.all([
+    const [scripture, slaa, stoic] = await Promise.all([
       step.do("scripture", retry, () => writeScripture(env, ctx)).catch((e) => { errors.scripture = String(e?.message || e).slice(0, 400); return null; }),
       step.do("slaa reading", retry, () => writeSlaaReading(env, ctx, date)).catch((e) => { errors.slaa = String(e?.message || e).slice(0, 400); return null; }),
+      step.do("stoic reading", retry, () => writeStoic(env, ctx, date)).catch((e) => { errors.stoic = String(e?.message || e).slice(0, 400); return null; }),
     ]);
 
     const extras = await step.do("comics and weather", async () => ({
@@ -131,7 +133,7 @@ export class EditionWorkflow extends WorkflowEntrypoint {
       const edition = {
         date, longDate: ctx.longDate, number: ctx.number,
         weather: extras.weather, comics: extras.comics,
-        devotions: { scripture, slaa },
+        devotions: { scripture, stoic, slaa },
         sections, front, pictures, errors, searches,
         generatedAt: new Date().toISOString(),
       };
@@ -145,6 +147,7 @@ export class EditionWorkflow extends WorkflowEntrypoint {
         env.DB.prepare("DELETE FROM devotions WHERE date = ?").bind(date),
         ...(scripture ? [env.DB.prepare("INSERT INTO devotions (date, kind, ref) VALUES (?, 'scripture', ?)").bind(date, scripture.reference)] : []),
         ...(slaa ? [env.DB.prepare("INSERT INTO devotions (date, kind, ref) VALUES (?, 'slaa', ?)").bind(date, `${slaa.title} (${slaa.source})`)] : []),
+        ...(stoic ? [env.DB.prepare("INSERT INTO devotions (date, kind, ref) VALUES (?, 'stoic', ?)").bind(date, `${stoic.author}, ${stoic.work} ${stoic.citation}`)] : []),
         ...ids.map((s) =>
           env.DB.prepare("INSERT OR REPLACE INTO stories (id, date, section, headline, url) VALUES (?, ?, ?, ?, ?)")
             .bind(s.id, date, s.section, s.headline, s.sources[0]?.url || null)
