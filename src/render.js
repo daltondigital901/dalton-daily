@@ -26,9 +26,11 @@ a{color:inherit}
 .title a{text-decoration:none}
 .motto{text-align:center;font-style:italic;color:var(--muted);font-size:14px;margin-top:6px}
 .dateline{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:4px double var(--rule);border-bottom:1px solid var(--rule);padding:7px 2px;font-family:"Libre Franklin",Arial,sans-serif;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase}
-nav.index{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 20px;padding:9px 0;border-bottom:1px solid var(--hair);font-family:"Libre Franklin",Arial,sans-serif;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase}
-nav.index a{text-decoration:none;color:var(--muted)}
+nav.index{position:sticky;top:0;z-index:20;background:var(--paper);display:flex;flex-wrap:nowrap;justify-content:space-between;align-items:center;gap:0;padding:0;border-bottom:1px solid var(--hair);font-family:"Libre Franklin",Arial,sans-serif;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;overflow-x:auto;scrollbar-width:none}
+nav.index::-webkit-scrollbar{display:none}
+nav.index a{flex:0 0 auto;text-decoration:none;color:var(--muted);padding:11px 2px;white-space:nowrap}
 nav.index a:hover{color:var(--accent)}
+nav.index .sep{flex:0 0 1px;align-self:stretch;margin:9px 0;background:var(--hair)}
 
 /* Shared type */
 .kicker{font-family:"Libre Franklin",Arial,sans-serif;font-size:10.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:5px}
@@ -125,7 +127,8 @@ figure.ph figcaption{font-family:"Libre Franklin",Arial,sans-serif;font-size:10.
 .strip .go{font-family:"Libre Franklin",Arial,sans-serif;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 
 /* Navigation state and inside-page turns */
-nav.index a.on{color:var(--ink);font-weight:700;border-bottom:2px solid var(--accent);padding-bottom:2px}
+nav.index a.on{color:var(--ink);font-weight:700;box-shadow:inset 0 -2px 0 var(--accent)}
+@media (max-width:1100px){nav.index{justify-content:flex-start;gap:0 18px}}
 .kicker a{text-decoration:none}
 a.plain{text-decoration:none;display:block}
 .more{font-family:"Libre Franklin",Arial,sans-serif;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);text-decoration:none}
@@ -182,7 +185,9 @@ blockquote.stoic p{margin:0 0 8px;text-align:left}
  nav.index::-webkit-scrollbar{display:none}
  nav.index a{flex:0 0 auto;padding:12px 10px;font-size:11.5px;white-space:nowrap}
  nav.index a[data-r]{color:var(--accent);font-weight:700}
- nav.index a.on{border-bottom:0;box-shadow:inset 0 -3px 0 var(--accent);padding-bottom:12px}
+ nav.index a.on{box-shadow:inset 0 -3px 0 var(--accent)}
+ nav.index{gap:0}
+ nav.index .sep{margin:10px 4px}
  /* Readable text: no justified rivers on a narrow column */
  .body p,.lead .body p{text-align:left;hyphens:manual}
  .lead h2{font-size:32px;line-height:1.08}
@@ -297,7 +302,9 @@ function masthead(ed, base = "", active = "") {
   <nav class="index">
     ${link(base || "/", "Front Page", "home")}
     ${link(`${base}/reflections`, "Reflections", "reflections").replace("<a ", '<a data-r="1" ')}
-    ${DESKS.map((d) => link(`${base}/${d.slug}`, d.name, d.slug)).join("")}
+    <i class="sep" aria-hidden="true"></i>
+    ${DESKS.map((d) => link(`${base}/${d.slug}`, d.short || d.name, d.slug)).join("")}
+    <i class="sep" aria-hidden="true"></i>
     ${link(`${base}/comics`, "Comics", "comics")}
   </nav>`;
 }

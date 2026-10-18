@@ -4,15 +4,15 @@
 // `lookback`: days of past headlines to avoid repeating (default 3; longer for evergreen beats).
 
 export const DESKS = [
-  { key: "world", slug: "world", name: "The World" },
-  { key: "money", slug: "business", name: "Business & Markets" },
-  { key: "science", slug: "technology", name: "Technology & Science" },
-  { key: "law", slug: "law", name: "Law & Courts" },
-  { key: "local", slug: "memphis", name: "Memphis" },
-  { key: "ideas", slug: "ideas", name: "Ideas" },
-  { key: "culture", slug: "culture", name: "Arts & Culture" },
-  { key: "sports", slug: "sports", name: "Sports" },
-  { key: "travel", slug: "travel", name: "Travel" },
+  { key: "world", slug: "world", name: "The World", short: "World" },
+  { key: "money", slug: "business", name: "Business & Markets", short: "Business" },
+  { key: "science", slug: "technology", name: "Technology & Science", short: "Tech & Science" },
+  { key: "law", slug: "law", name: "Law & Courts", short: "Law" },
+  { key: "local", slug: "memphis", name: "Memphis", short: "Memphis" },
+  { key: "ideas", slug: "ideas", name: "Ideas", short: "Ideas" },
+  { key: "culture", slug: "culture", name: "Arts & Culture", short: "Culture" },
+  { key: "sports", slug: "sports", name: "Sports", short: "Sports" },
+  { key: "travel", slug: "travel", name: "Travel", short: "Travel" },
 ];
 
 export const SECTIONS = [
