@@ -1,0 +1,23 @@
+name: Clear GoDaddy parking records (daltondaily.com)
+
+# One-time: remove the parked A records on the apex and the www CNAME so the Worker's
+# custom domains can be attached. Leaves every other record (DMARC, domainconnect) alone.
+on:
+  push:
+    paths: [".github/workflows/dns-clear-parking.yml"]
+
+jobs:
+  clear:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -e
+          ZID=$(curl -s -H "Authorization: Bearer $CF_TOKEN" "https://api.cloudflare.com/client/v4/zones?name=daltondaily.com" | jq -r '.result[0].id')
+          curl -s -H "Authorization: Bearer $CF_TOKEN" "https://api.cloudflare.com/client/v4/zones/$ZID/dns_records?per_page=100" \
+            | jq -r '.result[] | select((.type=="A" and .name=="daltondaily.com" and (.content=="3.33.130.190" or .content=="15.197.148.33")) or (.type=="CNAME" and .name=="www.daltondaily.com" and .content=="daltondaily.com")) | "\(.id) \(.type) \(.name) \(.content)"' \
+            | while read -r id type name content; do
+                ok=$(curl -s -X DELETE -H "Authorization: Bearer $CF_TOKEN" "https://api.cloudflare.com/client/v4/zones/$ZID/dns_records/$id" | jq -r '.success')
+                echo "::notice title=deleted::$type $name -> $content success=$ok"
+              done
