@@ -3,6 +3,15 @@ main = "src/index.js"
 compatibility_date = "2026-10-01"
 workers_dev = true
 
+# Public address. The bare domain redirects to www in the Worker.
+[[routes]]
+pattern = "www.daltondaily.com"
+custom_domain = true
+
+[[routes]]
+pattern = "daltondaily.com"
+custom_domain = true
+
 # Printed by 3:00 AM Central: first attempt at 2:00 AM, backup attempt at 2:30 AM if the first did not land.
 # Both UTC slots fire year-round; the handler only acts in the slot that is 2 AM in Chicago (handles DST).
 [triggers]
