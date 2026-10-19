@@ -1,0 +1,11 @@
+name: Refresh comics
+on:
+  workflow_dispatch:
+    inputs:
+      date: { description: "Edition date (YYYY-MM-DD)", required: true }
+      apply: { description: "1 to save to the edition", default: "1" }
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -sS "https://www.daltondaily.com/admin/comics?date=${{ inputs.date }}&apply=${{ inputs.apply }}" | jq .
