@@ -4,7 +4,7 @@ import { WorkflowEntrypoint } from "cloudflare:workers";
 import { SECTIONS } from "./sections.js";
 import { reportSection, sectionRequest, finishSection } from "./claude.js";
 import { submitBatch, getBatch, cancelBatch, batchResults } from "./batch.js";
-import { fetchComics, fetchWeather } from "./comics.js";
+import { fetchComics, fetchWeather, seenComics } from "./comics.js";
 import { writeScripture, writeStoic, writeCommonplace, stoicRequest, finishStoic, commonplaceRequest, finishCommonplace } from "./devotions.js";
 import { findImages } from "./images.js";
 import { pingIndexNow } from "./indexnow.js";
@@ -167,7 +167,7 @@ export class EditionWorkflow extends WorkflowEntrypoint {
     const batchedCount = SECTIONS.filter((sec) => batched[`section-${sec.key}`]).length;
 
     const extras = await step.do("comics and weather", async () => ({
-      comics: await fetchComics(),
+      comics: await fetchComics(await seenComics(env.DB, date), date),
       weather: await fetchWeather(),
     }));
 

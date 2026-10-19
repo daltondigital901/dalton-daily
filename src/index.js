@@ -4,6 +4,7 @@ import { SECTIONS } from "./sections.js";
 import { ICONS } from "./icons.js";
 import { ticker, build as buildQuotes } from "./ticker.js";
 import { renderPrint } from "./print.js";
+import { fetchComics, seenComics } from "./comics.js";
 
 function b64(b) {
   const bin = atob(b);
@@ -128,6 +129,15 @@ export default {
 
     if (url.pathname.startsWith("/admin/")) {
       // fall through to the handlers below; responses carry noindex via renderMessage
+    }
+    // Refresh the funnies on an edition without reprinting it: /admin/comics?date=YYYY-MM-DD[&apply=1]
+    if (url.pathname === "/admin/comics") {
+      const date = url.searchParams.get("date") || (await env.DB.prepare("SELECT MAX(date) AS d FROM editions").first())?.d;
+      const comics = await fetchComics(await seenComics(env.DB, date), date);
+      if (url.searchParams.get("apply") === "1" && comics.length) {
+        await env.DB.prepare("UPDATE editions SET data = json_set(data, '$.comics', json(?)) WHERE date = ?").bind(JSON.stringify(comics), date).run();
+      }
+      return Response.json({ date, applied: url.searchParams.get("apply") === "1", comics });
     }
     if (url.pathname === "/admin/run") {
       // No login, so guard the spend: at most one print every 20 minutes.

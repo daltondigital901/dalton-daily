@@ -605,7 +605,7 @@ function comicsPage(ed) {
     .map((c) => {
       const imgs = c.images.map((src) => `<img src="${esc(src)}" alt="${esc(c.title)}" loading="lazy" referrerpolicy="no-referrer">`).join("");
       return `<div class="strip k-${esc(c.key)}"><p class="name">${esc(c.strip)}</p><div class="by">${esc(c.author)}${c.license ? ` &middot; ${esc(c.license)}` : ""}</div>
-      <p class="ttl">${esc(c.title)}</p>${imgs}${c.caption ? `<p class="cap">${esc(c.caption)}</p>` : ""}
+      <p class="ttl">${esc(c.title)}${c.classic ? " <span class=\"classic\">&middot; from the archive</span>" : ""}</p>${imgs}${c.caption ? `<p class="cap">${esc(c.caption)}</p>` : ""}
       <a class="go" href="${esc(c.link)}" target="_blank" rel="noopener">View at source &rarr;</a></div>`;
     })
     .join("");

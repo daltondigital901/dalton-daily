@@ -143,7 +143,7 @@ function comicsPage(ed) {
     ${folio(ed, "The Funnies")}
     <h2 class="deskname">The Funnies</h2>
     <div class="comics">${strips
-      .map((c) => `<div class="strip k-${esc(c.key)}"><p class="name">${esc(c.strip)} <span>&middot; ${esc(c.author)}</span></p><p class="ttl">${esc(c.title)}</p>
+      .map((c) => `<div class="strip k-${esc(c.key)}"><p class="name">${esc(c.strip)} <span>&middot; ${esc(c.author)}</span></p><p class="ttl">${esc(c.title)}${c.classic ? " &middot; from the archive" : ""}</p>
         ${c.images.map((src) => `<img src="${esc(src)}" alt="" referrerpolicy="no-referrer">`).join("")}${c.caption ? `<p class="cap">${esc(c.caption)}</p>` : ""}</div>`)
       .join("")}</div>
   </section>`;
